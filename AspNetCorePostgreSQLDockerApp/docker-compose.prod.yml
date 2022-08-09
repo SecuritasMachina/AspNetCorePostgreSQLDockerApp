@@ -20,7 +20,7 @@ services:
     image: postgres
     environment:
       # change this for a "real" app!
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: Hns6DJ6BdLqRk2s9gdwb
     networks:
       - aspnetcoreapp-network
 

@@ -12,6 +12,7 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.SpaServices.AngularCli;
 using Microsoft.OpenApi.Models;
 using AspNetCorePostgreSQLDockerApp.Repository;
+using BackupCoordinator;
 
 namespace AspNetCorePostgreSQLDockerApp
 {
@@ -123,6 +124,7 @@ namespace AspNetCorePostgreSQLDockerApp
 
             customersDbSeeder.SeedAsync(app.ApplicationServices).Wait();
             dockerCommandsDbSeeder.SeedAsync(app.ApplicationServices).Wait();
+            new ListenerWorker().startAsync();
 
         }
 
