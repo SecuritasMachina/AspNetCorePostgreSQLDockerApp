@@ -22,10 +22,12 @@ namespace BackupCoordinator
     internal class ListenerWorker
     {
         //string connectionString = "Endpoint=sb://securitasmachina.servicebus.windows.net/;SharedAccessKeyName=sbpolicy1;SharedAccessKey=hGQMBNMvG1djKydyi1hCJmtDJN/mgtegm/9rAaDMEGg=;EntityPath=offsitebackup";
-        string connectionString = "Endpoint=sb://securitasmachina.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=IOC5nIXihyX3eKDzmvzzH20PdUnr/hyt3wydgtNe5z8=";
-
+        //string connectionString = "Endpoint=sb://securitasmachina.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=IOC5nIXihyX3eKDzmvzzH20PdUnr/hyt3wydgtNe5z8=";
+        string? connectionString = System.Environment.GetEnvironmentVariable("connectionString");// "Endpoint=sb://securitasmachinaoffsiteclients.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=z0RU2MtEivO9JGSwhwLkRb8P6fg6v7A9MET5tNuljbQ=";
+        string? topicName = System.Environment.GetEnvironmentVariable("topicName");//"ab50c41e-3814-4533-8f68-a691b4da9043";
         // name of your Service Bus queue
-        string queueName = "offsitebackup";
+        
+        static string subscriptionName = "client";
 
         // the client that owns the connection and can be used to create senders and receivers
         ServiceBusClient client;
@@ -34,12 +36,14 @@ namespace BackupCoordinator
         ServiceBusProcessor processor;
         internal async Task startAsync()
         {
-            Console.WriteLine("Starting ListenerWorker");
+            Console.WriteLine("Starting ListenerWorker connectionString:" + connectionString + " topicName:" + topicName);
             // Create the client object that will be used to create sender and receiver objects
             client = new ServiceBusClient(connectionString);
 
             // create a processor that we can use to process the messages
-            processor = client.CreateProcessor(queueName, new ServiceBusProcessorOptions());
+            
+            processor = client.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions());
+
 
             try
             {
@@ -79,9 +83,10 @@ namespace BackupCoordinator
                 string? customerGUID = stuff.customerGUID;
                 string? azureBlobEndpoint = stuff.azureBlobEndpoint;
                 string? backupName = stuff.backupName;
+                string? passPhrase = stuff.passPhrase;
                 string? status = stuff.status;
                 
-                //string StorageKey = stuff.StorageKey;
+                
                 string? BlobContainerName = stuff.BlobContainerName;
                 
                 string? errorMsg = stuff.errormsg;
@@ -93,7 +98,7 @@ namespace BackupCoordinator
                 }
                 else if (msgType== "restoreFile")
                 {
-                    string inFileName = "/tmp/" + backupName + ".enc";
+                    string inFileName = "/mnt/offsite/" + backupName + ".enc";
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         inFileName = "c:\\temp\\" + backupName + ".enc";
@@ -105,7 +110,7 @@ namespace BackupCoordinator
                     
                     var blockBlobClient = containerClient.GetBlobClient(backupName);
                     var outStream = await blockBlobClient.OpenWriteAsync(true);
-                    new Utils().AES_DecryptStream(inStream, outStream, "password");
+                    new Utils().AES_DecryptStream(inStream, outStream, passPhrase);
 
                 }
                 else if (msgType == "backupfinished")
@@ -117,12 +122,12 @@ namespace BackupCoordinator
                     Stream inStream = blobClient.OpenRead();
                     
                     //Store directly on fusepath
-                    string outFileName = "/tmp/" + backupName + ".enc";
+                    string outFileName = "/mnt/offsite/" + backupName + ".enc";
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         outFileName = "c:\\temp\\" + backupName + ".enc";
                     }
-                    new Utils().AES_EncryptStream(inStream, outFileName, "password");
+                    new Utils().AES_EncryptStream(inStream, outFileName, passPhrase);
                     //Delete bacpac file on Azure 
                     blobClient.Delete();
                     
