@@ -77,13 +77,13 @@ namespace BackupCoordinator
                 dynamic stuff = JsonConvert.DeserializeObject(body);
                 string? msgType = stuff.msgType;
                 string? customerGUID = stuff.customerGUID;
+                string? azureBlobEndpoint = stuff.azureBlobEndpoint;
                 string? backupName = stuff.backupName;
                 string? status = stuff.status;
-                string? StorageAccountName = stuff.StorageAccountName;
-                string? BlobStorageEndpoint = stuff.BlobStorageEndpoint;
+                
                 //string StorageKey = stuff.StorageKey;
                 string? BlobContainerName = stuff.BlobContainerName;
-                string? BlobSASToken = stuff.BlobSASToken;
+                
                 string? errorMsg = stuff.errormsg;
                 int RetentionDays = stuff.RetentionDays;
                 Console.WriteLine(msgType);
@@ -99,11 +99,11 @@ namespace BackupCoordinator
                         inFileName = "c:\\temp\\" + backupName + ".enc";
                     }
                     FileStream inStream = new FileStream(inFileName, FileMode.Open);
-                    BlobServiceClient blobServiceClient = new BlobServiceClient("DefaultEndpointsProtocol=https;AccountName=offsitestaging;AccountKey=FBzxqBpxgT79Ze9fxe3GzZ1MVbkw0Tdj12pf/DMhpibLCtVoN3y1uo7W3n+YNsNWamQ6W0jbWsgY+AStAeLL8Q==;EndpointSuffix=core.windows.net");
+                    BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
                     BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
                     BlobClient blobClient = containerClient.GetBlobClient(backupName);
-                    //Stream outStream = blobClient.OpenRead();
-                    var blockBlobClient = containerClient.GetBlobClient(backupName+".decrypt");// . .GetBlockBlobClient(backupName);
+                    
+                    var blockBlobClient = containerClient.GetBlobClient(backupName);
                     var outStream = await blockBlobClient.OpenWriteAsync(true);
                     new Utils().AES_DecryptStream(inStream, outStream, "password");
 
@@ -111,7 +111,7 @@ namespace BackupCoordinator
                 else if (msgType == "backupfinished")
                 {
                     // Create a BlobServiceClient object which will be used to create a container client
-                    BlobServiceClient blobServiceClient = new BlobServiceClient("DefaultEndpointsProtocol=https;AccountName=offsitestaging;AccountKey=FBzxqBpxgT79Ze9fxe3GzZ1MVbkw0Tdj12pf/DMhpibLCtVoN3y1uo7W3n+YNsNWamQ6W0jbWsgY+AStAeLL8Q==;EndpointSuffix=core.windows.net");
+                    BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
                     BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
                     BlobClient blobClient = containerClient.GetBlobClient(backupName);
                     Stream inStream = blobClient.OpenRead();
