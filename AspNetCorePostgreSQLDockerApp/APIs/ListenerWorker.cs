@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -8,14 +9,29 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Azure.Messaging.ServiceBus;
+using Azure.Storage.Blobs;
 using Newtonsoft.Json;
+using Google.Apis.Storage.v1.Data;
+using Google.Cloud.Storage.V1;
+using System.Security.Cryptography;
+using AspNetCorePostgreSQLDockerApp.APIs;
+using System.Runtime.InteropServices;
 
 namespace BackupCoordinator
 {
     internal class ListenerWorker
     {
-        string connectionString = "Endpoint=sb://securitasmachina.servicebus.windows.net/;SharedAccessKeyName=sbpolicy1;SharedAccessKey=hGQMBNMvG1djKydyi1hCJmtDJN/mgtegm/9rAaDMEGg=;EntityPath=offsitebackup";
+        //string connectionString = "Endpoint=sb://securitasmachina.servicebus.windows.net/;SharedAccessKeyName=sbpolicy1;SharedAccessKey=hGQMBNMvG1djKydyi1hCJmtDJN/mgtegm/9rAaDMEGg=;EntityPath=offsitebackup";
+        string connectionString = "Endpoint=sb://securitasmachina.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=IOC5nIXihyX3eKDzmvzzH20PdUnr/hyt3wydgtNe5z8=";
 
+        // name of your Service Bus queue
+        string queueName = "offsitebackup";
+
+        // the client that owns the connection and can be used to create senders and receivers
+        ServiceBusClient client;
+
+        // the processor that reads and processes messages from the queue
+        ServiceBusProcessor processor;
         internal async Task startAsync()
         {
             Console.WriteLine("Starting ListenerWorker");
@@ -39,7 +55,7 @@ namespace BackupCoordinator
                 {
                     Thread.Sleep(2000);
                 }
-               
+
             }
             finally
             {
@@ -50,14 +66,7 @@ namespace BackupCoordinator
             }
         }
 
-        // name of your Service Bus queue
-        string queueName = "offsitebackup";
-
-        // the client that owns the connection and can be used to create senders and receivers
-        ServiceBusClient client;
-
-        // the processor that reads and processes messages from the queue
-        ServiceBusProcessor processor;
+        
         // handle received messages
         static async Task MessageHandler(ProcessMessageEventArgs args)
         {
@@ -66,7 +75,7 @@ namespace BackupCoordinator
             try
             {
                 dynamic stuff = JsonConvert.DeserializeObject(body);
-            
+                string? msgType = stuff.msgType;
                 string? customerGUID = stuff.customerGUID;
                 string? backupName = stuff.backupName;
                 string? status = stuff.status;
@@ -75,18 +84,55 @@ namespace BackupCoordinator
                 //string StorageKey = stuff.StorageKey;
                 string? BlobContainerName = stuff.BlobContainerName;
                 string? BlobSASToken = stuff.BlobSASToken;
+                string? errorMsg = stuff.errormsg;
                 int RetentionDays = stuff.RetentionDays;
-
-                if (BlobSASToken != null)
+                Console.WriteLine(msgType);
+                if (msgType == "backupstart")
                 {
-                    String command = $"azcopy copy \"{BlobStorageEndpoint}{BlobContainerName}/{backupName}?{BlobSASToken}\" \"/tmp/{backupName}\"";
-                    Console.WriteLine(command);
-                    ProcessStartInfo cmdsi = new ProcessStartInfo("/bin/bash");
-                    cmdsi.Arguments = command;
-                    Process cmd = Process.Start(cmdsi);
-                    cmd.WaitForExit();
+                    
                 }
-            }catch(Exception ex)
+                else if (msgType== "restoreFile")
+                {
+                    string inFileName = "/tmp/" + backupName + ".enc";
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        inFileName = "c:\\temp\\" + backupName + ".enc";
+                    }
+                    FileStream inStream = new FileStream(inFileName, FileMode.Open);
+                    BlobServiceClient blobServiceClient = new BlobServiceClient("DefaultEndpointsProtocol=https;AccountName=offsitestaging;AccountKey=FBzxqBpxgT79Ze9fxe3GzZ1MVbkw0Tdj12pf/DMhpibLCtVoN3y1uo7W3n+YNsNWamQ6W0jbWsgY+AStAeLL8Q==;EndpointSuffix=core.windows.net");
+                    BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
+                    BlobClient blobClient = containerClient.GetBlobClient(backupName);
+                    //Stream outStream = blobClient.OpenRead();
+                    var blockBlobClient = containerClient.GetBlobClient(backupName+".decrypt");// . .GetBlockBlobClient(backupName);
+                    var outStream = await blockBlobClient.OpenWriteAsync(true);
+                    new Utils().AES_DecryptStream(inStream, outStream, "password");
+
+                }
+                else if (msgType == "backupfinished")
+                {
+                    // Create a BlobServiceClient object which will be used to create a container client
+                    BlobServiceClient blobServiceClient = new BlobServiceClient("DefaultEndpointsProtocol=https;AccountName=offsitestaging;AccountKey=FBzxqBpxgT79Ze9fxe3GzZ1MVbkw0Tdj12pf/DMhpibLCtVoN3y1uo7W3n+YNsNWamQ6W0jbWsgY+AStAeLL8Q==;EndpointSuffix=core.windows.net");
+                    BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
+                    BlobClient blobClient = containerClient.GetBlobClient(backupName);
+                    Stream inStream = blobClient.OpenRead();
+                    
+                    //Store directly on fusepath
+                    string outFileName = "/tmp/" + backupName + ".enc";
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        outFileName = "c:\\temp\\" + backupName + ".enc";
+                    }
+                    new Utils().AES_EncryptStream(inStream, outFileName, "password");
+                    //Delete bacpac file on Azure 
+                    blobClient.Delete();
+                    
+                }
+                else if (msgType == "Error")
+                {
+                    Console.WriteLine("error "+ errorMsg);
+                }
+            }
+            catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
             }

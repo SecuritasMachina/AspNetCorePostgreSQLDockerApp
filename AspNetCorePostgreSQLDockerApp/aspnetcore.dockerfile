@@ -1,11 +1,11 @@
 FROM mcr.microsoft.com/dotnet/core/sdk
 
-LABEL author="Dan Wahlin"
+LABEL author="Securitas Machina"
 
 ENV ASPNETCORE_URLS=http://+:5000
 
 WORKDIR /var/www/aspnetcoreapp
-
+COPY ./azcopy/* /usr/bin/
 COPY . .
 
 EXPOSE 5000

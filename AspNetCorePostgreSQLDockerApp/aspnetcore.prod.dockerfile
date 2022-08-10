@@ -1,6 +1,5 @@
 FROM mcr.microsoft.com/dotnet/core/sdk AS build
 WORKDIR /var/www/aspnetcoreapp
-COPY ./azcopy/* /bin/bash
 # copy csproj and restore as distinct layers
 COPY ./*.csproj ./
 RUN dotnet restore
