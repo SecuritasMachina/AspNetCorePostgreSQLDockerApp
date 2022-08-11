@@ -14,19 +14,19 @@ using Newtonsoft.Json;
 using Google.Apis.Storage.v1.Data;
 using Google.Cloud.Storage.V1;
 using System.Security.Cryptography;
-using AspNetCorePostgreSQLDockerApp.APIs;
+
 using System.Runtime.InteropServices;
 
-namespace BackupCoordinator
+namespace SecuritasMachinaOffsiteAgent.BO
 {
     internal class ListenerWorker
     {
-        //string connectionString = "Endpoint=sb://securitasmachina.servicebus.windows.net/;SharedAccessKeyName=sbpolicy1;SharedAccessKey=hGQMBNMvG1djKydyi1hCJmtDJN/mgtegm/9rAaDMEGg=;EntityPath=offsitebackup";
-        //string connectionString = "Endpoint=sb://securitasmachina.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=IOC5nIXihyX3eKDzmvzzH20PdUnr/hyt3wydgtNe5z8=";
-        string? connectionString = System.Environment.GetEnvironmentVariable("connectionString");// "Endpoint=sb://securitasmachinaoffsiteclients.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=z0RU2MtEivO9JGSwhwLkRb8P6fg6v7A9MET5tNuljbQ=";
-        string? topicName = System.Environment.GetEnvironmentVariable("topicName");//"ab50c41e-3814-4533-8f68-a691b4da9043";
+        string connectionString = Environment.GetEnvironmentVariable("connectionString");
+        string topicName = Environment.GetEnvironmentVariable("topicName");
+        static string azureBlobEndpoint= Environment.GetEnvironmentVariable("azureBlobEndpoint");
+        static string envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
         // name of your Service Bus queue
-        
+
         static string subscriptionName = "client";
 
         // the client that owns the connection and can be used to create senders and receivers
@@ -41,7 +41,7 @@ namespace BackupCoordinator
             client = new ServiceBusClient(connectionString);
 
             // create a processor that we can use to process the messages
-            
+
             processor = client.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions());
 
 
@@ -70,7 +70,7 @@ namespace BackupCoordinator
             }
         }
 
-        
+
         // handle received messages
         static async Task MessageHandler(ProcessMessageEventArgs args)
         {
@@ -79,24 +79,24 @@ namespace BackupCoordinator
             try
             {
                 dynamic stuff = JsonConvert.DeserializeObject(body);
-                string? msgType = stuff.msgType;
-                string? customerGUID = stuff.customerGUID;
-                string? azureBlobEndpoint = stuff.azureBlobEndpoint;
-                string? backupName = stuff.backupName;
-                string? passPhrase = stuff.passPhrase;
-                string? status = stuff.status;
-                
-                
-                string? BlobContainerName = stuff.BlobContainerName;
-                
-                string? errorMsg = stuff.errormsg;
+                string msgType = stuff.msgType;
+                string customerGUID = stuff.customerGUID;
+               // string azureBlobEndpoint = azureBlobEndpoint;
+                string backupName = stuff.backupName;
+                string passPhrase = stuff.passPhrase;
+                string status = stuff.status;
+
+
+                string BlobContainerName = stuff.BlobContainerName;
+
+                string errorMsg = stuff.errormsg;
                 int RetentionDays = stuff.RetentionDays;
                 Console.WriteLine(msgType);
                 if (msgType == "backupstart")
                 {
-                    
+
                 }
-                else if (msgType== "restoreFile")
+                else if (msgType == "restoreFile")
                 {
                     string inFileName = "/mnt/offsite/" + backupName + ".enc";
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -107,9 +107,11 @@ namespace BackupCoordinator
                     BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
                     BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
                     BlobClient blobClient = containerClient.GetBlobClient(backupName);
-                    
+
                     var blockBlobClient = containerClient.GetBlobClient(backupName);
                     var outStream = await blockBlobClient.OpenWriteAsync(true);
+                    if (envPassPhrase != null)
+                        passPhrase = envPassPhrase;
                     new Utils().AES_DecryptStream(inStream, outStream, passPhrase);
 
                 }
@@ -120,21 +122,31 @@ namespace BackupCoordinator
                     BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
                     BlobClient blobClient = containerClient.GetBlobClient(backupName);
                     Stream inStream = blobClient.OpenRead();
-                    
+
                     //Store directly on fusepath
                     string outFileName = "/mnt/offsite/" + backupName + ".enc";
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         outFileName = "c:\\temp\\" + backupName + ".enc";
                     }
+                    if (envPassPhrase != null)
+                        passPhrase = envPassPhrase;
                     new Utils().AES_EncryptStream(inStream, outFileName, passPhrase);
                     //Delete bacpac file on Azure 
                     blobClient.Delete();
-                    
+
+                }
+                else if (msgType == "backupStarted")
+                {
+                    if (envPassPhrase != null)
+                        passPhrase = envPassPhrase;
+                    BackupWorker backupWorker = new BackupWorker(azureBlobEndpoint, BlobContainerName, backupName, passPhrase);
+       
+
                 }
                 else if (msgType == "Error")
                 {
-                    Console.WriteLine("error "+ errorMsg);
+                    Console.WriteLine("error " + errorMsg);
                 }
             }
             catch (Exception ex)

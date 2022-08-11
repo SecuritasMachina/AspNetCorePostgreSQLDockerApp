@@ -8,7 +8,7 @@ WORKDIR /var/www/aspnetcoreapp
 COPY ./azcopy/* /usr/bin/
 COPY . .
 
-EXPOSE 5000
+#EXPOSE 5000
 
 ENTRYPOINT ["/bin/bash", "-c", "dotnet restore && dotnet run"]
 #ENTRYPOINT ["/bin/bash"]

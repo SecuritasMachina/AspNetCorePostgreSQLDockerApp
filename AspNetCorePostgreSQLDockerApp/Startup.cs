@@ -12,8 +12,10 @@ using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.SpaServices.AngularCli;
 using Microsoft.OpenApi.Models;
 using AspNetCorePostgreSQLDockerApp.Repository;
-using BackupCoordinator;
+
 using System.Threading;
+using AspNetCorePostgreSQLDockerApp.BO;
+
 namespace AspNetCorePostgreSQLDockerApp
 {
     public class Startup
@@ -40,12 +42,12 @@ namespace AspNetCorePostgreSQLDockerApp
             services.AddControllersWithViews();
 
             // Add our PostgreSQL Repositories (scoped to each request)
-            services.AddScoped<IDockerCommandsRepository, DockerCommandsRepository>();
-            services.AddScoped<ICustomersRepository, CustomersRepository>();
+            //services.AddScoped<IDockerCommandsRepository, DockerCommandsRepository>();
+            //services.AddScoped<ICustomersRepository, CustomersRepository>();
             
             //Transient: Created each time they're needed
-            services.AddTransient<DockerCommandsDbSeeder>();
-            services.AddTransient<CustomersDbSeeder>();
+            //services.AddTransient<DockerCommandsDbSeeder>();
+            //services.AddTransient<CustomersDbSeeder>();
 
             services.AddSwaggerGen(options =>
             {

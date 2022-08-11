@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
 
-namespace AspNetCorePostgreSQLDockerApp.APIs
+namespace SecuritasMachinaOffsiteAgent.BO
 {
     public class Utils
     {
@@ -46,7 +46,7 @@ namespace AspNetCorePostgreSQLDockerApp.APIs
                     fsOut.Write(buffer, 0, read);
                 }
             }
-            catch (System.Security.Cryptography.CryptographicException ex_CryptographicException)
+            catch (CryptographicException ex_CryptographicException)
             {
                 Debug.WriteLine("CryptographicException error: " + ex_CryptographicException.Message);
             }
@@ -118,7 +118,7 @@ namespace AspNetCorePostgreSQLDockerApp.APIs
 
             CryptoStream cs = new CryptoStream(fsCrypt, AES.CreateEncryptor(), CryptoStreamMode.Write);
 
-           // FileStream fsIn = new FileStream(inputFile, FileMode.Open);
+            // FileStream fsIn = new FileStream(inputFile, FileMode.Open);
 
             //create a buffer (1mb) so only this amount will allocate in the memory and not the whole file
             byte[] buffer = new byte[1048576];
@@ -185,7 +185,7 @@ namespace AspNetCorePostgreSQLDockerApp.APIs
                     fsOut.Write(buffer, 0, read);
                 }
             }
-            catch (System.Security.Cryptography.CryptographicException ex_CryptographicException)
+            catch (CryptographicException ex_CryptographicException)
             {
                 Debug.WriteLine("CryptographicException error: " + ex_CryptographicException.Message);
             }
