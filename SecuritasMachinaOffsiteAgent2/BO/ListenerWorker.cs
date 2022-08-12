@@ -21,8 +21,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
 {
     internal class ListenerWorker
     {
-        string connectionString = Environment.GetEnvironmentVariable("connectionString");
-        string topicName = Environment.GetEnvironmentVariable("topicName");
+        string connectionString = "Endpoint=sb://securitasmachinaoffsiteclients.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=z0RU2MtEivO9JGSwhwLkRb8P6fg6v7A9MET5tNuljbQ=";
+            //Environment.GetEnvironmentVariable("connectionString");
+        static string topicName = Environment.GetEnvironmentVariable("customerGuid");
         static string azureBlobEndpoint= Environment.GetEnvironmentVariable("azureBlobEndpoint");
         static string envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
         // name of your Service Bus queue
@@ -36,7 +37,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         ServiceBusProcessor processor;
         internal async Task startAsync()
         {
-            Console.WriteLine("Starting ListenerWorker connectionString:" + connectionString + " topicName:" + topicName);
+            Console.WriteLine("Starting ListenerWorker azureBlobEndpoint:" + azureBlobEndpoint + " customerGuid:" + topicName);
             // Create the client object that will be used to create sender and receiver objects
             client = new ServiceBusClient(connectionString);
 

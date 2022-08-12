@@ -16,5 +16,6 @@ WORKDIR /app
 COPY --from=build-env /app/out .
 ENTRYPOINT ["dotnet", "SecuritasMachinaOffsiteAgent.dll"]
 
+#docker build -t securitasmachinaoffsiteagent
 #docker tag securitasmachinaoffsiteagent  securitasmachina2022/securitasmachinaoffsiteagent:latest
 #docker push securitasmachina2022/securitasmachinaoffsiteagent:latest
