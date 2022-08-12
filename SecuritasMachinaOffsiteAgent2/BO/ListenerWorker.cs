@@ -22,10 +22,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
     internal class ListenerWorker
     {
         string connectionString = "Endpoint=sb://securitasmachinaoffsiteclients.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=z0RU2MtEivO9JGSwhwLkRb8P6fg6v7A9MET5tNuljbQ=";
-            //Environment.GetEnvironmentVariable("connectionString");
+        //Environment.GetEnvironmentVariable("connectionString");
         static string topicName = Environment.GetEnvironmentVariable("customerGuid");
-        static string azureBlobEndpoint= Environment.GetEnvironmentVariable("azureBlobEndpoint");
+        static string azureBlobEndpoint = Environment.GetEnvironmentVariable("azureBlobEndpoint");
         static string envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
+        static string mountedDir = "/mnt/offsite/";
         // name of your Service Bus queue
 
         static string subscriptionName = "client";
@@ -37,10 +38,66 @@ namespace SecuritasMachinaOffsiteAgent.BO
         ServiceBusProcessor processor;
         internal async Task startAsync()
         {
-            Console.WriteLine("Starting ListenerWorker azureBlobEndpoint:" + azureBlobEndpoint + " customerGuid:" + topicName);
+            Console.WriteLine("Starting ListenerWorker azureBlobEndpoint:" + azureBlobEndpoint);
+            Console.WriteLine("customerGuid:" + topicName);
+            if(envPassPhrase!=null)
+                Console.WriteLine("passPhrase Length:" + envPassPhrase.Length);
             // Create the client object that will be used to create sender and receiver objects
             client = new ServiceBusClient(connectionString);
 
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                mountedDir = "c:\\temp\\";
+            }
+
+            DirectoryInfo d = new DirectoryInfo(mountedDir);
+            FileInfo[] Files = d.GetFiles("*"); //Getting Text files
+            string str = "";
+            Console.WriteLine("Showing directory listing for " + mountedDir);
+            foreach (FileInfo file in Files)
+            {
+                Console.WriteLine(file.Name);
+            }
+            Console.WriteLine("Testing writing to " + mountedDir);
+            try
+            {
+                using (StreamWriter sw = new StreamWriter(mountedDir + "test.txt"))
+                {
+                    sw.WriteLine("test");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error writing to " + mountedDir + " - Ensure VM instance has full access to cloud storage");
+            }
+            Console.WriteLine("Testing reading from " + mountedDir);
+            try
+            {
+                string line = "";
+                using (StreamReader sr = new StreamReader(mountedDir + "test.txt"))
+                {
+                    while ((line = sr.ReadLine()) != null)
+                    {
+                        //Console.WriteLine(line);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error reading from " + mountedDir + " - Ensure VM instance has full access to cloud storage");
+            }
+            Console.WriteLine("Testing delete at " + mountedDir);
+            try
+            {
+                File.Delete(mountedDir + "test.txt");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error deleting at " + mountedDir + " - Ensure VM instance has full access to cloud storage");
+            }
+            
+            //TODO Send dir listing to master
+            string[] fileArray = Directory.GetFiles(mountedDir);
             // create a processor that we can use to process the messages
 
             processor = client.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions());
@@ -48,6 +105,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             try
             {
+                Console.WriteLine("Listening");
                 // add handler to process messages
                 processor.ProcessMessageAsync += MessageHandler;
 
@@ -59,7 +117,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 while (true)
                 {
                     Thread.Sleep(2000);
-                    Console.WriteLine("Listening");
+                    //Console.WriteLine("Listening");
                 }
 
             }
@@ -83,7 +141,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 dynamic stuff = JsonConvert.DeserializeObject(body);
                 string msgType = stuff.msgType;
                 string customerGUID = stuff.customerGUID;
-               // string azureBlobEndpoint = azureBlobEndpoint;
+                // string azureBlobEndpoint = azureBlobEndpoint;
                 string backupName = stuff.backupName;
                 string passPhrase = stuff.passPhrase;
                 string status = stuff.status;
@@ -94,21 +152,14 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 string errorMsg = stuff.errormsg;
                 int RetentionDays = stuff.RetentionDays;
                 Console.WriteLine(msgType);
-                if (msgType == "backupstart")
+                if (msgType == "restoreFile")
                 {
+                    string inFileName = mountedDir + backupName + ".enc";
 
-                }
-                else if (msgType == "restoreFile")
-                {
-                    string inFileName = "/mnt/offsite/" + backupName + ".enc";
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
-                        inFileName = "c:\\temp\\" + backupName + ".enc";
-                    }
                     FileStream inStream = new FileStream(inFileName, FileMode.Open);
                     BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
                     BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
-                    BlobClient blobClient = containerClient.GetBlobClient(backupName);
+                    //BlobClient blobClient = containerClient.GetBlobClient(backupName);
 
                     var blockBlobClient = containerClient.GetBlobClient(backupName);
                     var outStream = await blockBlobClient.OpenWriteAsync(true);
@@ -126,11 +177,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     Stream inStream = blobClient.OpenRead();
 
                     //Store directly on fusepath
-                    string outFileName = "/mnt/offsite/" + backupName + ".enc";
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
-                        outFileName = "c:\\temp\\" + backupName + ".enc";
-                    }
+                    string outFileName = mountedDir + backupName + ".enc";
+
                     if (envPassPhrase != null)
                         passPhrase = envPassPhrase;
                     new Utils().AES_EncryptStream(inStream, outFileName, passPhrase);
@@ -143,7 +191,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     if (envPassPhrase != null)
                         passPhrase = envPassPhrase;
                     BackupWorker backupWorker = new BackupWorker(azureBlobEndpoint, BlobContainerName, backupName, passPhrase);
-       
+
 
                 }
                 else if (msgType == "Error")

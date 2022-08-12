@@ -26,6 +26,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             this.backupName = backupName;
             this.passPhrase = passPhrase;
             worker = new BackgroundWorker();
+            worker.WorkerSupportsCancellation = true;
             worker.DoWork += worker_DoWork;
             Timer timer = new Timer(1000 * 60);
             timer.Elapsed += timer_Elapsed;
@@ -66,6 +67,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.ToString());
                 if (loopCount > 12 * 60)
                 {
                     Console.WriteLine("Over 12 hours has elapsed, cancelling thread looking for: " + backupName);

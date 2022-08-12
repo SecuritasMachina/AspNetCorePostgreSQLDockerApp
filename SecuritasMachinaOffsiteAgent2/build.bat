@@ -1,0 +1,3 @@
+docker build -t securitasmachinaoffsiteagent .
+docker tag securitasmachinaoffsiteagent  securitasmachina2022/securitasmachinaoffsiteagent:latest
+docker push securitasmachina2022/securitasmachinaoffsiteagent:latest
