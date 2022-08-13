@@ -16,6 +16,7 @@ using Google.Cloud.Storage.V1;
 using System.Security.Cryptography;
 
 using System.Runtime.InteropServices;
+using Azure.Storage.Blobs.Models;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
@@ -26,6 +27,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         static string topicName = Environment.GetEnvironmentVariable("customerGuid");
         static string azureBlobEndpoint = Environment.GetEnvironmentVariable("azureBlobEndpoint");
         static string envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
+        static string azureBlobContainerName = Environment.GetEnvironmentVariable("azureBlobContainerName");
         static string mountedDir = "/mnt/offsite/";
         // name of your Service Bus queue
 
@@ -39,6 +41,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         internal async Task startAsync()
         {
             Console.WriteLine("Starting ListenerWorker azureBlobEndpoint:" + azureBlobEndpoint);
+            Console.WriteLine("azureBlobContainerName:" + azureBlobContainerName);
             Console.WriteLine("customerGuid:" + topicName);
             if(envPassPhrase!=null)
                 Console.WriteLine("passPhrase Length:" + envPassPhrase.Length);
@@ -58,19 +61,20 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
                 Console.WriteLine(file.Name);
             }
-            Console.WriteLine("Testing writing to " + mountedDir);
+            Console.Write("Testing writing to " + mountedDir);
             try
             {
                 using (StreamWriter sw = new StreamWriter(mountedDir + "test.txt"))
                 {
                     sw.WriteLine("test");
                 }
+                Console.WriteLine("...Success");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error writing to " + mountedDir + " - Ensure VM instance has full access to cloud storage");
+                Console.WriteLine("...Error writing to " + mountedDir + " - Ensure VM instance has full access to cloud storage");
             }
-            Console.WriteLine("Testing reading from " + mountedDir);
+            Console.Write("Testing reading from " + mountedDir);
             try
             {
                 string line = "";
@@ -81,21 +85,34 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         //Console.WriteLine(line);
                     }
                 }
+                Console.WriteLine("...Success");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error reading from " + mountedDir + " - Ensure VM instance has full access to cloud storage");
+                Console.WriteLine("...Error reading from " + mountedDir + " - Ensure VM instance has full access to cloud storage");
             }
-            Console.WriteLine("Testing delete at " + mountedDir);
+            Console.Write("Testing delete at " + mountedDir);
             try
             {
                 File.Delete(mountedDir + "test.txt");
+                Console.WriteLine("...Success");
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error deleting at " + mountedDir + " - Ensure VM instance has full access to cloud storage");
+                Console.WriteLine("...Error deleting at " + mountedDir + " - Ensure VM instance has full access to cloud storage");
             }
-            
+            //TODO test dir listing of blob container
+            Console.Write("Testing Azure Blob Endpoint at " + azureBlobEndpoint+" "+ azureBlobContainerName);
+            BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
+            BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(azureBlobContainerName);
+
+            await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
+            {
+                Console.WriteLine("\t" + blobItem.Name);
+                //TODO spawn workers for files
+                BackupWorker backupWorker = new BackupWorker(azureBlobEndpoint, azureBlobContainerName, blobItem.Name, envPassPhrase);
+                
+            }
             //TODO Send dir listing to master
             string[] fileArray = Directory.GetFiles(mountedDir);
             // create a processor that we can use to process the messages
@@ -166,24 +183,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     if (envPassPhrase != null)
                         passPhrase = envPassPhrase;
                     new Utils().AES_DecryptStream(inStream, outStream, passPhrase);
-
-                }
-                else if (msgType == "backupfinished")
-                {
-                    // Create a BlobServiceClient object which will be used to create a container client
-                    BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
-                    BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
-                    BlobClient blobClient = containerClient.GetBlobClient(backupName);
-                    Stream inStream = blobClient.OpenRead();
-
-                    //Store directly on fusepath
-                    string outFileName = mountedDir + backupName + ".enc";
-
-                    if (envPassPhrase != null)
-                        passPhrase = envPassPhrase;
-                    new Utils().AES_EncryptStream(inStream, outFileName, passPhrase);
-                    //Delete bacpac file on Azure 
-                    blobClient.Delete();
 
                 }
                 else if (msgType == "backupStarted")

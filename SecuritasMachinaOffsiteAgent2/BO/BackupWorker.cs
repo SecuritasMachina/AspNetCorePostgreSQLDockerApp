@@ -62,6 +62,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 new Utils().AES_EncryptStream(inStream, outFileName, passPhrase);
                 //Delete bacpac file on Azure 
                 blobClient.Delete();
+                Console.WriteLine("Completed, deleted : " + backupName);
                 //report progress
                 worker.CancelAsync();
             }
