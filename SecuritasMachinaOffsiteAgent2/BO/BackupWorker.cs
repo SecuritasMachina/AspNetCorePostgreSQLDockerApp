@@ -1,8 +1,12 @@
 ﻿using Azure.Storage.Blobs;
+using Newtonsoft.Json;
+using Common.DTO.V2;
+using Common.Statics;
 using System;
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Timers;
 using Timer = System.Timers.Timer;
 
@@ -46,6 +50,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
                 loopCount++;
                 Console.WriteLine("Looking for: " + backupName);
+                //TODO send post with status
                 //report progress
                 BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
                 BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
@@ -62,7 +67,18 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 new Utils().AES_EncryptStream(inStream, outFileName, passPhrase);
                 //Delete bacpac file on Azure 
                 blobClient.Delete();
-                Console.WriteLine("Completed, deleted : " + backupName);
+                 FileDTO fileDTO = new FileDTO();
+                fileDTO.FileName = backupName;
+                fileDTO.Status = "Success";
+                string myJson = JsonConvert.SerializeObject(fileDTO);
+                using (var client = new HttpClient())
+                {
+                    var response =  client.PostAsync(
+                        RunTimeSettings.WebListenerURL,
+                         new StringContent(myJson, Encoding.UTF8, "application/json"));
+                }
+                Console.WriteLine("Completed encryption, deleted : " + backupName);
+                //TODO send post with status
                 //report progress
                 worker.CancelAsync();
             }

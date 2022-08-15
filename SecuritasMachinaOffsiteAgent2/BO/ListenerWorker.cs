@@ -17,13 +17,15 @@ using System.Security.Cryptography;
 
 using System.Runtime.InteropServices;
 using Azure.Storage.Blobs.Models;
+using Common.Statics;
+using Common.Utils.Comm;
+using Common.DTO.V2;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
     internal class ListenerWorker
     {
-        string connectionString = "Endpoint=sb://securitasmachinaoffsiteclients.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=z0RU2MtEivO9JGSwhwLkRb8P6fg6v7A9MET5tNuljbQ=";
-        //Environment.GetEnvironmentVariable("connectionString");
+       
         static string topicName = Environment.GetEnvironmentVariable("customerGuid");
         static string azureBlobEndpoint = Environment.GetEnvironmentVariable("azureBlobEndpoint");
         static string envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
@@ -46,15 +48,15 @@ namespace SecuritasMachinaOffsiteAgent.BO
             if(envPassPhrase!=null)
                 Console.WriteLine("passPhrase Length:" + envPassPhrase.Length);
             // Create the client object that will be used to create sender and receiver objects
-            client = new ServiceBusClient(connectionString);
+            client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 mountedDir = "c:\\temp\\";
             }
 
-            DirectoryInfo d = new DirectoryInfo(mountedDir);
-            FileInfo[] Files = d.GetFiles("*"); //Getting Text files
+            DirectoryInfo directoryInfo = new DirectoryInfo(mountedDir);
+            FileInfo[] Files = directoryInfo.GetFiles("*"); //Getting Text files
             string str = "";
             Console.WriteLine("Showing directory listing for " + mountedDir);
             foreach (FileInfo file in Files)
@@ -89,7 +91,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                Console.WriteLine("...Error reading from " + mountedDir + " - Ensure VM instance has full access to cloud storage");
+                Console.WriteLine("...Error reading from " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
             }
             Console.Write("Testing delete at " + mountedDir);
             try
@@ -99,29 +101,37 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                Console.WriteLine("...Error deleting at " + mountedDir + " - Ensure VM instance has full access to cloud storage");
+                Console.WriteLine("...Error deleting at " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
             }
             //TODO test dir listing of blob container
-            Console.Write("Testing Azure Blob Endpoint at " + azureBlobEndpoint+" "+ azureBlobContainerName);
-            BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
-            BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(azureBlobContainerName);
-
-            await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
+            BlobServiceClient blobServiceClient;
+            BlobContainerClient containerClient = null;
+            try
             {
-                Console.WriteLine("\t" + blobItem.Name);
-                //TODO spawn workers for files
-                BackupWorker backupWorker = new BackupWorker(azureBlobEndpoint, azureBlobContainerName, blobItem.Name, envPassPhrase);
-                
-            }
-            //TODO Send dir listing to master
-            string[] fileArray = Directory.GetFiles(mountedDir);
-            // create a processor that we can use to process the messages
+                Console.Write("Testing Azure Blob Endpoint at " + azureBlobEndpoint + " " + azureBlobContainerName);
+                 blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
+                 containerClient = blobServiceClient.GetBlobContainerClient(azureBlobContainerName);
 
-            processor = client.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions());
+                await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
+                {
+                    Console.WriteLine("\t" + blobItem.Name);
+
+
+                }
+                Console.WriteLine("Success");
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("...Error deleting at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure Blob endpoint and container name match Azure & Access Key URL");
+            }
+            
 
 
             try
             {
+                // create a processor that we can use to process the messages
+
+                processor = client.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions());
                 Console.WriteLine("Listening");
                 // add handler to process messages
                 processor.ProcessMessageAsync += MessageHandler;
@@ -133,8 +143,45 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 await processor.StartProcessingAsync();
                 while (true)
                 {
-                    Thread.Sleep(2000);
-                    //Console.WriteLine("Listening");
+                    try
+                    {
+                        // Send dir listing to master
+                        FileInfo[] Files2 = directoryInfo.GetFiles("*"); //Getting Text files
+                        string[] fileArray = Directory.GetFiles(mountedDir);
+                        DirListingDTO dirListingDTO = new DirListingDTO();
+                        
+                        dirListingDTO.guid = topicName;
+                        dirListingDTO.fileArray = fileArray;
+
+                        foreach (FileInfo file in Files2)
+                        {
+                            FileDTO fDTO = new FileDTO();
+                            fDTO.FileName = file.Name;
+                            fDTO.length = file.Length;
+                            dirListingDTO.fileDTOs.Add(fDTO);
+
+                        }
+                        string myJson = JsonConvert.SerializeObject(dirListingDTO);
+                        GenericMessage genericMessage = new GenericMessage();
+                        GenericMessage.msgTypes msgType = GenericMessage.msgTypes.dirListing;
+                        genericMessage.msgType = msgType.ToString();
+                        genericMessage.msg = myJson;
+                        string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
+                        ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
+
+                        Thread.Sleep(60 * 1000);
+                        Console.WriteLine("Scanning " + azureBlobEndpoint + " " + azureBlobContainerName);
+                        await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
+                        {
+                            Console.WriteLine("\t" + blobItem.Name);
+                            // spawn workers for files
+                            BackupWorker backupWorker = new BackupWorker(azureBlobEndpoint, azureBlobContainerName, blobItem.Name, envPassPhrase);
+                        }
+                    }catch(Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                    }
+                    
                 }
 
             }
