@@ -25,11 +25,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
 {
     internal class ListenerWorker
     {
-       
-        static string topicName = Environment.GetEnvironmentVariable("customerGuid");
+
+        static string topicCustomerGuid = Environment.GetEnvironmentVariable("customerGuid");
         static string azureBlobEndpoint = Environment.GetEnvironmentVariable("azureBlobEndpoint");
         static string envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
         static string azureBlobContainerName = Environment.GetEnvironmentVariable("azureBlobContainerName");
+        static int RetentionDays = 45;// Environment.GetEnvironmentVariable("RetentionDays");
+
         static string mountedDir = "/mnt/offsite/";
         // name of your Service Bus queue
 
@@ -42,11 +44,23 @@ namespace SecuritasMachinaOffsiteAgent.BO
         ServiceBusProcessor processor;
         internal async Task startAsync()
         {
+            try
+            {
+                RetentionDays = Int32.Parse(Environment.GetEnvironmentVariable("RetentionDays"));
+            }
+            catch (Exception ex) { }
             Console.WriteLine("Starting ListenerWorker azureBlobEndpoint:" + azureBlobEndpoint);
             Console.WriteLine("azureBlobContainerName:" + azureBlobContainerName);
-            Console.WriteLine("customerGuid:" + topicName);
-            if(envPassPhrase!=null)
+            Console.WriteLine("customerGuid:" + topicCustomerGuid);
+            Console.WriteLine("RetentionDays:" + RetentionDays);
+            if (envPassPhrase != null)
                 Console.WriteLine("passPhrase Length:" + envPassPhrase.Length);
+
+            HTTPUtils.populateRuntime(topicCustomerGuid);
+            if (RunTimeSettings.SBConnectionString == null || RunTimeSettings.SBConnectionString.Length == 0)
+            {
+                Console.WriteLine("!!! Unable to retrieve configuration !!!");
+            }
             // Create the client object that will be used to create sender and receiver objects
             client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
 
@@ -109,8 +123,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
             try
             {
                 Console.Write("Testing Azure Blob Endpoint at " + azureBlobEndpoint + " " + azureBlobContainerName);
-                 blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
-                 containerClient = blobServiceClient.GetBlobContainerClient(azureBlobContainerName);
+                blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
+                containerClient = blobServiceClient.GetBlobContainerClient(azureBlobContainerName);
 
                 await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
                 {
@@ -120,18 +134,18 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 }
                 Console.WriteLine("Success");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Console.WriteLine("...Error deleting at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure Blob endpoint and container name match Azure & Access Key URL");
             }
-            
+
 
 
             try
             {
                 // create a processor that we can use to process the messages
 
-                processor = client.CreateProcessor(topicName, subscriptionName, new ServiceBusProcessorOptions());
+                processor = client.CreateProcessor(topicCustomerGuid, subscriptionName, new ServiceBusProcessorOptions());
                 Console.WriteLine("Listening");
                 // add handler to process messages
                 processor.ProcessMessageAsync += MessageHandler;
@@ -149,9 +163,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         FileInfo[] Files2 = directoryInfo.GetFiles("*"); //Getting Text files
                         string[] fileArray = Directory.GetFiles(mountedDir);
                         DirListingDTO dirListingDTO = new DirListingDTO();
-                        
-                        dirListingDTO.guid = topicName;
-                        dirListingDTO.fileArray = fileArray;
 
                         foreach (FileInfo file in Files2)
                         {
@@ -166,22 +177,41 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         GenericMessage.msgTypes msgType = GenericMessage.msgTypes.dirListing;
                         genericMessage.msgType = msgType.ToString();
                         genericMessage.msg = myJson;
+                        genericMessage.guid = topicCustomerGuid;
                         string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
                         ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
-
-                        Thread.Sleep(60 * 1000);
                         Console.WriteLine("Scanning " + azureBlobEndpoint + " " + azureBlobContainerName);
+                        DirListingDTO dirListingDTO1 = new DirListingDTO();
                         await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
                         {
-                            Console.WriteLine("\t" + blobItem.Name);
-                            // spawn workers for files
-                            BackupWorker backupWorker = new BackupWorker(azureBlobEndpoint, azureBlobContainerName, blobItem.Name, envPassPhrase);
+                            FileDTO fileDTO = new FileDTO();
+                            fileDTO.FileName = blobItem.Name;
+                            dirListingDTO1.fileDTOs.Add(fileDTO);
                         }
-                    }catch(Exception ex)
+                            ThreadPool.SetMaxThreads(3, 10);
+                        using (var countdownEvent = new CountdownEvent(dirListingDTO1.fileDTOs.Count))
+                        {
+                             foreach (FileDTO fileDTO in dirListingDTO1.fileDTOs)
+                            {
+                                Console.WriteLine("\t" + fileDTO.FileName);
+
+                                // spawn workers for files
+                                BackupWorker backupWorker = new BackupWorker(topicCustomerGuid, azureBlobEndpoint, azureBlobContainerName, fileDTO.FileName, envPassPhrase);
+                                ThreadPool.QueueUserWorkItem(x =>
+                                {
+                                    backupWorker.start();
+                                    countdownEvent.Signal();
+                                } );
+                            }
+                            countdownEvent.Wait();
+                        }
+                        Thread.Sleep(60 * 1000);
+                    }
+                    catch (Exception ex)
                     {
                         Console.WriteLine(ex.Message);
                     }
-                    
+
                 }
 
             }
@@ -194,24 +224,26 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
         }
 
-
+        public static void RunBackup(object s)
+        {
+            BackupWorker say = s as BackupWorker;
+            say.start();
+            //Console.WriteLine(say);
+        }
         // handle received messages
         static async Task MessageHandler(ProcessMessageEventArgs args)
         {
             string body = args.Message.Body.ToString();
-            Console.WriteLine($"Received: {body}");
+            //Console.WriteLine($"Received: {body}");
             try
             {
                 dynamic stuff = JsonConvert.DeserializeObject(body);
                 string msgType = stuff.msgType;
-                string customerGUID = stuff.customerGUID;
-                // string azureBlobEndpoint = azureBlobEndpoint;
+                string customerGUID = topicCustomerGuid;
+
                 string backupName = stuff.backupName;
                 string passPhrase = stuff.passPhrase;
                 string status = stuff.status;
-
-
-                string BlobContainerName = stuff.BlobContainerName;
 
                 string errorMsg = stuff.errormsg;
                 int RetentionDays = stuff.RetentionDays;
@@ -222,22 +254,26 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                     FileStream inStream = new FileStream(inFileName, FileMode.Open);
                     BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
-                    BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
-                    //BlobClient blobClient = containerClient.GetBlobClient(backupName);
+                    BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(azureBlobContainerName);
+
 
                     var blockBlobClient = containerClient.GetBlobClient(backupName);
                     var outStream = await blockBlobClient.OpenWriteAsync(true);
                     if (envPassPhrase != null)
                         passPhrase = envPassPhrase;
                     new Utils().AES_DecryptStream(inStream, outStream, passPhrase);
-
-                }
-                else if (msgType == "backupStarted")
-                {
-                    if (envPassPhrase != null)
-                        passPhrase = envPassPhrase;
-                    BackupWorker backupWorker = new BackupWorker(azureBlobEndpoint, BlobContainerName, backupName, passPhrase);
-
+                    FileDTO fileDTO = new FileDTO();
+                    fileDTO.FileName = backupName;
+                    fileDTO.Status = "Success";
+                    fileDTO.length = outStream.Length;
+                    string myJson = JsonConvert.SerializeObject(fileDTO);
+                    GenericMessage genericMessage = new GenericMessage();
+                    GenericMessage.msgTypes msgType2 = GenericMessage.msgTypes.restoreComplete;
+                    genericMessage.msgType = msgType2.ToString();
+                    genericMessage.msg = myJson;
+                    genericMessage.guid = customerGUID;
+                    string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
+                    ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
 
                 }
                 else if (msgType == "Error")
