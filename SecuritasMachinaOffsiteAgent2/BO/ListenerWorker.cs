@@ -30,6 +30,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         static string azureBlobEndpoint = Environment.GetEnvironmentVariable("azureBlobEndpoint");
         static string envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
         static string azureBlobContainerName = Environment.GetEnvironmentVariable("azureBlobContainerName");
+        static string azureBlobRestoreContainerName = Environment.GetEnvironmentVariable("azureBlobRestoreContainerName");
         static int RetentionDays = 45;// Environment.GetEnvironmentVariable("RetentionDays");
 
         static string mountedDir = "/mnt/offsite/";
@@ -51,6 +52,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             catch (Exception ex) { }
             Console.WriteLine("Starting ListenerWorker azureBlobEndpoint:" + azureBlobEndpoint);
             Console.WriteLine("azureBlobContainerName:" + azureBlobContainerName);
+            Console.WriteLine("azureBlobRestoreContainerName:" + azureBlobRestoreContainerName);
             Console.WriteLine("customerGuid:" + topicCustomerGuid);
             Console.WriteLine("RetentionDays:" + RetentionDays);
             if (envPassPhrase != null)
@@ -188,7 +190,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                             fileDTO.FileName = blobItem.Name;
                             dirListingDTO1.fileDTOs.Add(fileDTO);
                         }
-                            ThreadPool.SetMaxThreads(3, 10);
+                            ThreadPool.SetMaxThreads(3, 6);
                         using (var countdownEvent = new CountdownEvent(dirListingDTO1.fileDTOs.Count))
                         {
                              foreach (FileDTO fileDTO in dirListingDTO1.fileDTOs)
@@ -254,7 +256,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                     FileStream inStream = new FileStream(inFileName, FileMode.Open);
                     BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
-                    BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(azureBlobContainerName);
+                    BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(azureBlobRestoreContainerName);
 
 
                     var blockBlobClient = containerClient.GetBlobClient(backupName);

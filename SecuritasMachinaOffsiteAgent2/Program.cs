@@ -2,7 +2,7 @@
 //Console.WriteLine("Hello, World!");
 using SecuritasMachinaOffsiteAgent.BO;
 
-Console.WriteLine("Starting v2.1.4");
+Console.WriteLine("Starting v2.1.5");
 
 new ListenerWorker().startAsync();
 //Console.WriteLine("ending");
