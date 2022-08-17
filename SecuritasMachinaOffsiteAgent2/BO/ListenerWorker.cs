@@ -181,7 +181,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         genericMessage.msg = myJson;
                         genericMessage.guid = topicCustomerGuid;
                         string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
-                        ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
+                        //TODO Don't send if same
+                        HTTPUtils.SendMessage(genericMessage.msgType+"-"+ topicCustomerGuid, genericMessageJson);
+                        //ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
                         Console.WriteLine("Scanning " + azureBlobEndpoint + " " + azureBlobContainerName);
                         DirListingDTO dirListingDTO1 = new DirListingDTO();
                         await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
@@ -190,10 +192,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                             fileDTO.FileName = blobItem.Name;
                             dirListingDTO1.fileDTOs.Add(fileDTO);
                         }
-                            ThreadPool.SetMaxThreads(3, 6);
+                        ThreadPool.SetMaxThreads(3, 6);
                         using (var countdownEvent = new CountdownEvent(dirListingDTO1.fileDTOs.Count))
                         {
-                             foreach (FileDTO fileDTO in dirListingDTO1.fileDTOs)
+                            foreach (FileDTO fileDTO in dirListingDTO1.fileDTOs)
                             {
                                 Console.WriteLine("\t" + fileDTO.FileName);
 
@@ -203,7 +205,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                 {
                                     backupWorker.start();
                                     countdownEvent.Signal();
-                                } );
+                                });
                             }
                             countdownEvent.Wait();
                         }
