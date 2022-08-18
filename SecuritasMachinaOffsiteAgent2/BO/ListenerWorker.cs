@@ -157,6 +157,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 // start processing 
                 await processor.StartProcessingAsync();
+                string oldGenericMessageJson = "";
                 while (true)
                 {
                     try
@@ -182,7 +183,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         genericMessage.guid = topicCustomerGuid;
                         string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
                         //TODO Don't send if same
-                        HTTPUtils.SendMessage(genericMessage.msgType+"-"+ topicCustomerGuid, genericMessageJson);
+                        if (!oldGenericMessageJson.Equals(genericMessageJson))
+                        {
+                            HTTPUtils.SendMessage(genericMessage.msgType + "-" + topicCustomerGuid, genericMessageJson);
+                            oldGenericMessageJson = genericMessageJson;
+                        }
                         //ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
                         Console.WriteLine("Scanning " + azureBlobEndpoint + " " + azureBlobContainerName);
                         DirListingDTO dirListingDTO1 = new DirListingDTO();
@@ -238,26 +243,27 @@ namespace SecuritasMachinaOffsiteAgent.BO
         static async Task MessageHandler(ProcessMessageEventArgs args)
         {
             string body = args.Message.Body.ToString();
-            //Console.WriteLine($"Received: {body}");
+            
             try
             {
-                dynamic stuff = JsonConvert.DeserializeObject(body);
-                string msgType = stuff.msgType;
+                GenericMessage genericMessage = JsonConvert.DeserializeObject<GenericMessage>(body);
+                string msgType = genericMessage.msgType;
                 string customerGUID = topicCustomerGuid;
+                dynamic msgObj = JsonConvert.DeserializeObject(genericMessage.msg);
+                string backupName = msgObj.backupName;
+                string passPhrase = "";
 
-                string backupName = stuff.backupName;
-                string passPhrase = stuff.passPhrase;
-                string status = stuff.status;
 
-                string errorMsg = stuff.errormsg;
-                int RetentionDays = stuff.RetentionDays;
                 Console.WriteLine(msgType);
+                Console.WriteLine($"Received: {body}");
                 if (msgType == "restoreFile")
                 {
-                    string inFileName = mountedDir + backupName + ".enc";
+                    string inFileName = mountedDir + backupName ;
 
                     FileStream inStream = new FileStream(inFileName, FileMode.Open);
                     BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
+                    if (azureBlobRestoreContainerName == null)
+                        azureBlobRestoreContainerName = "restored";
                     BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(azureBlobRestoreContainerName);
 
 
@@ -271,18 +277,18 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     fileDTO.Status = "Success";
                     fileDTO.length = outStream.Length;
                     string myJson = JsonConvert.SerializeObject(fileDTO);
-                    GenericMessage genericMessage = new GenericMessage();
+                    GenericMessage genericMessage2 = new GenericMessage();
                     GenericMessage.msgTypes msgType2 = GenericMessage.msgTypes.restoreComplete;
-                    genericMessage.msgType = msgType2.ToString();
-                    genericMessage.msg = myJson;
-                    genericMessage.guid = customerGUID;
+                    genericMessage2.msgType = msgType2.ToString();
+                    genericMessage2.msg = myJson;
+                    genericMessage2.guid = customerGUID;
                     string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
                     ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
 
                 }
                 else if (msgType == "Error")
                 {
-                    Console.WriteLine("error " + errorMsg);
+                    //Console.WriteLine("error " + errorMsg);
                 }
             }
             catch (Exception ex)

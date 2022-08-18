@@ -24,7 +24,7 @@ namespace Common.Utils.Comm
                 client = new HttpClient(handler);
             }
             client.BaseAddress = new Uri("https://securitasmachinacoordinater.azurewebsites.net");
-            HttpResponseMessage response = client.GetAsync("/v2/config/" + pCustomerGuid).Result;
+            HttpResponseMessage response = client.GetAsync("/api/v2/config/" + pCustomerGuid).Result;
             response.EnsureSuccessStatusCode();
             string result = response.Content.ReadAsStringAsync().Result;
             dynamic stuff = JsonConvert.DeserializeObject(result);
@@ -36,7 +36,7 @@ namespace Common.Utils.Comm
         }
         public static void SendMessage(string messageType,string json)
         {
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL+ "/v3/putCache/"+ messageType);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL+ "/api/v3/putCache/" + messageType);
             request.Method = "POST";
             request.ContentType = "application/json";
             request.Accept = "application/json";
