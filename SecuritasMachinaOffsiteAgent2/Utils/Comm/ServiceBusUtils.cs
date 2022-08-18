@@ -23,7 +23,7 @@ namespace Common.Utils.Comm
                 if (client == null)
                     client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
                 if (sender == null)
-                    sender = client.CreateSender(RunTimeSettings.topicName);
+                    sender = client.CreateSender(RunTimeSettings.topicNameCustomerGuid);
                 ServiceBusMessageBatch messageBatch = await sender.CreateMessageBatchAsync();
                 messageBatch.TryAddMessage(new ServiceBusMessage(myJson));
                 await sender.SendMessagesAsync(messageBatch);

@@ -172,6 +172,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                             FileDTO fDTO = new FileDTO();
                             fDTO.FileName = file.Name;
                             fDTO.length = file.Length;
+                            long unixTimeMilliseconds = new DateTimeOffset(file.CreationTime).ToUnixTimeMilliseconds();
+                            fDTO.FileDate = unixTimeMilliseconds;// file.LastWriteTime.to .ToLongDateString();
                             dirListingDTO.fileDTOs.Add(fDTO);
 
                         }
@@ -195,6 +197,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         {
                             FileDTO fileDTO = new FileDTO();
                             fileDTO.FileName = blobItem.Name;
+                            //fileDTO.FileDate=blobItem.
                             dirListingDTO1.fileDTOs.Add(fileDTO);
                         }
                         ThreadPool.SetMaxThreads(3, 6);
@@ -243,12 +246,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
         static async Task MessageHandler(ProcessMessageEventArgs args)
         {
             string body = args.Message.Body.ToString();
-            
+            string customerGUID = topicCustomerGuid;
             try
             {
                 GenericMessage genericMessage = JsonConvert.DeserializeObject<GenericMessage>(body);
                 string msgType = genericMessage.msgType;
-                string customerGUID = topicCustomerGuid;
+                
                 dynamic msgObj = JsonConvert.DeserializeObject(genericMessage.msg);
                 string backupName = msgObj.backupName;
                 string passPhrase = "";
@@ -258,7 +261,20 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 Console.WriteLine($"Received: {body}");
                 if (msgType == "restoreFile")
                 {
-                    string inFileName = mountedDir + backupName ;
+                    string inFileName = mountedDir + backupName;
+                    FileDTO fileDTO = new FileDTO();
+                    fileDTO.FileName = backupName;
+                    fileDTO.Status = "InProgress";
+                    //fileDTO.length = outStream.Length;
+                    string myJson = JsonConvert.SerializeObject(fileDTO);
+                    GenericMessage genericMessage2 = new GenericMessage();
+                   
+                    genericMessage2.msgType = "restoreRequest";
+                    genericMessage2.msg = myJson;
+                    genericMessage2.guid = customerGUID;
+                    string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
+
+                    HTTPUtils.SendMessage(genericMessage2.msgType + "-" + customerGUID, genericMessageJson);
 
                     FileStream inStream = new FileStream(inFileName, FileMode.Open);
                     BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
@@ -266,34 +282,41 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         azureBlobRestoreContainerName = "restored";
                     BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(azureBlobRestoreContainerName);
 
-
-                    var blockBlobClient = containerClient.GetBlobClient(backupName);
+                    string restoreFileName = backupName.Substring(0, backupName.LastIndexOf("."));
+                    var blockBlobClient = containerClient.GetBlobClient(restoreFileName);
                     var outStream = await blockBlobClient.OpenWriteAsync(true);
                     if (envPassPhrase != null)
                         passPhrase = envPassPhrase;
                     new Utils().AES_DecryptStream(inStream, outStream, passPhrase);
-                    FileDTO fileDTO = new FileDTO();
+                    //FileDTO fileDTO = new FileDTO();
                     fileDTO.FileName = backupName;
                     fileDTO.Status = "Success";
-                    fileDTO.length = outStream.Length;
-                    string myJson = JsonConvert.SerializeObject(fileDTO);
-                    GenericMessage genericMessage2 = new GenericMessage();
-                    GenericMessage.msgTypes msgType2 = GenericMessage.msgTypes.restoreComplete;
-                    genericMessage2.msgType = msgType2.ToString();
+                    //fileDTO.length = outStream.Length;
+                    myJson = JsonConvert.SerializeObject(fileDTO);
+                    genericMessage2 = new GenericMessage();
+                  
+                    genericMessage2.msgType = "restoreComplete";
                     genericMessage2.msg = myJson;
                     genericMessage2.guid = customerGUID;
-                    string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
-                    ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
+                    
 
+                    HTTPUtils.SendMessage(genericMessage2.msgType + "-" + customerGUID, JsonConvert.SerializeObject(genericMessage2));
                 }
                 else if (msgType == "Error")
                 {
-                    //Console.WriteLine("error " + errorMsg);
+                    
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message);
+                GenericMessage genericMessage2 = new GenericMessage();
+
+                genericMessage2.msgType = "restoreComplete";
+                genericMessage2.msg = ex.Message.ToString();
+                genericMessage2.guid = customerGUID;
+               
+                HTTPUtils.SendMessage(customerGUID, JsonConvert.SerializeObject(genericMessage2));
             }
             // complete the message. message is deleted from the queue. 
             await args.CompleteMessageAsync(args.Message);

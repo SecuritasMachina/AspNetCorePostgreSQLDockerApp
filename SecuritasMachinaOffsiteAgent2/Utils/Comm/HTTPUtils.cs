@@ -30,12 +30,46 @@ namespace Common.Utils.Comm
             dynamic stuff = JsonConvert.DeserializeObject(result);
             RunTimeSettings.passPhrase = stuff.passPhrase;
             RunTimeSettings.SBConnectionString = stuff.ServiceBusEndPoint;
-            RunTimeSettings.topicName = stuff.topicName;
+            RunTimeSettings.topicNameCustomerGuid = stuff.topicName;
 
 
         }
+        
+             public static void writeToLog(string guid,string messageType, string json)
+        {
+            ///api/v3/putLog
+            ///Console.Out.WriteLine("SendMessage:"+json);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "/api/v3/putLog/" + RunTimeSettings.topicNameCustomerGuid);
+            request.Method = "POST";
+            request.ContentType = "application/json";
+            request.Accept = "application/json";
+            request.ContentLength = json.Length;
+            using (Stream webStream = request.GetRequestStream())
+            using (StreamWriter requestWriter = new StreamWriter(webStream, System.Text.Encoding.ASCII))
+            {
+                requestWriter.Write(json);
+            }
+
+            try
+            {
+                WebResponse webResponse = request.GetResponse();
+                using (Stream webStream = webResponse.GetResponseStream() ?? Stream.Null)
+                using (StreamReader responseReader = new StreamReader(webStream))
+                {
+                    string response = responseReader.ReadToEnd();
+                    Console.Out.WriteLine(response);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.Out.WriteLine("-----------------");
+                Console.Out.WriteLine(e.Message);
+            }
+        }
+    }
         public static void SendMessage(string messageType,string json)
         {
+            Console.Out.WriteLine("SendMessage:"+json);
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL+ "/api/v3/putCache/" + messageType);
             request.Method = "POST";
             request.ContentType = "application/json";
