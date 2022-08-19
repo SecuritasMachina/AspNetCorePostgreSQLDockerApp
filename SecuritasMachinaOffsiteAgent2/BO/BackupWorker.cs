@@ -22,9 +22,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
         //private BackgroundWorker worker;
         private int loopCount = 0;
 
-        public BackupWorker(string customerGuid,string azureBlobEndpoint, string BlobContainerName, string backupName, string passPhrase)
+        public BackupWorker(string customerGuid, string azureBlobEndpoint, string BlobContainerName, string backupName, string passPhrase)
         {
-            Console.WriteLine("Starting BackupWorker for "+ backupName);
+            Console.WriteLine("Starting BackupWorker for " + backupName);
             this.customerGuid = customerGuid;
             this.azureBlobEndpoint = azureBlobEndpoint;
             this.BlobContainerName = BlobContainerName;
@@ -34,8 +34,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
         }
 
 
-        public  Task startAsync()
+        public Task StartAsync()
         {
+            string genericMessageJson;
             // Create a BlobServiceClient object which will be used to create a container client
             try
             {
@@ -67,11 +68,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage.msgType = msgType.ToString();
                 genericMessage.msg = myJson;
                 genericMessage.guid = customerGuid;
-                string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
-                 ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
+               // genericMessageJson = JsonConvert.SerializeObject(genericMessage);
+                ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
 
-                
-               
+
+
                 Console.WriteLine("Completed encryption, deleted : " + backupName);
                 //TODO send post with status
                 //report progress
@@ -80,10 +81,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
-                
+
             }
+            return null;
         }
 
-       
+
     }
 }

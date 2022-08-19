@@ -213,7 +213,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                 BackupWorker backupWorker = new BackupWorker(topicCustomerGuid, azureBlobEndpoint, azureBlobContainerName, fileDTO.FileName, envPassPhrase);
                                 ThreadPool.QueueUserWorkItem(x =>
                                 {
-                                    backupWorker.startAsync();
+                                    backupWorker.StartAsync();
                                     countdownEvent.Signal();
                                 });
                             }
@@ -242,7 +242,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         public static void RunBackup(object s)
         {
             BackupWorker say = s as BackupWorker;
-            say.startAsync();
+            say.StartAsync();
             //Console.WriteLine(say);
         }
         // handle received messages
