@@ -117,7 +117,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                Console.WriteLine("...Error deleting at " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
+                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", "...Error deleting at " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
+                //Console.WriteLine("...Error deleting at " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
             }
             //TODO test dir listing of blob container
             BlobServiceClient blobServiceClient;
@@ -208,6 +209,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                             foreach (FileDTO fileDTO in dirListingDTO1.fileDTOs)
                             {
                                 Console.WriteLine("\t" + fileDTO.FileName);
+                                HTTPUtils.writeToLog(topicCustomerGuid, "INFO", $"Started {fileDTO.FileName}");
 
                                 // spawn workers for files
                                 BackupWorker backupWorker = new BackupWorker(topicCustomerGuid, azureBlobEndpoint, azureBlobContainerName, fileDTO.FileName, envPassPhrase);
@@ -254,7 +256,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
                 GenericMessage genericMessage = JsonConvert.DeserializeObject<GenericMessage>(body);
                 string msgType = genericMessage.msgType;
-                
+
                 dynamic msgObj = JsonConvert.DeserializeObject(genericMessage.msg);
                 string backupName = msgObj.backupName;
                 string passPhrase = "";
@@ -271,7 +273,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     //fileDTO.length = outStream.Length;
                     string myJson = JsonConvert.SerializeObject(fileDTO);
                     GenericMessage genericMessage2 = new GenericMessage();
-                   
+
                     genericMessage2.msgType = "restoreRequest";
                     genericMessage2.msg = myJson;
                     genericMessage2.guid = customerGUID;
@@ -297,17 +299,17 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     //fileDTO.length = outStream.Length;
                     myJson = JsonConvert.SerializeObject(fileDTO);
                     genericMessage2 = new GenericMessage();
-                  
+
                     genericMessage2.msgType = "restoreComplete";
                     genericMessage2.msg = myJson;
                     genericMessage2.guid = customerGUID;
-                    
+
 
                     HTTPUtils.putCache(genericMessage2.msgType + "-" + customerGUID, JsonConvert.SerializeObject(genericMessage2));
                 }
                 else if (msgType == "Error")
                 {
-                    
+
                 }
             }
             catch (Exception ex)
@@ -318,7 +320,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage2.msgType = "restoreComplete";
                 genericMessage2.msg = ex.Message.ToString();
                 genericMessage2.guid = customerGUID;
-               
+
                 HTTPUtils.putCache(customerGUID, JsonConvert.SerializeObject(genericMessage2));
             }
             // complete the message. message is deleted from the queue. 

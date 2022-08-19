@@ -4,6 +4,6 @@ using SecuritasMachinaOffsiteAgent.BO;
 
 Console.WriteLine("Starting v2.1.5");
 
-new ListenerWorker().startAsync();
+await new ListenerWorker().startAsync();
 //Console.WriteLine("ending");
 await Task.Run(() => Thread.Sleep(Timeout.Infinite));

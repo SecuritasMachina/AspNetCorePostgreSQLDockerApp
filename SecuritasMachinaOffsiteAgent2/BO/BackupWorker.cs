@@ -34,10 +34,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
         }
 
 
-        public Task StartAsync()
+        public async Task<object> StartAsync()
         {
-            string genericMessageJson;
+            //string genericMessageJson;
             // Create a BlobServiceClient object which will be used to create a container client
+            GenericMessage genericMessage = new GenericMessage();
             try
             {
                 loopCount++;
@@ -63,13 +64,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 fileDTO.FileName = backupName;
                 fileDTO.Status = "Success";
                 string myJson = JsonConvert.SerializeObject(fileDTO);
-                GenericMessage genericMessage = new GenericMessage();
+               
                 GenericMessage.msgTypes msgType = GenericMessage.msgTypes.backupComplete;
                 genericMessage.msgType = msgType.ToString();
                 genericMessage.msg = myJson;
                 genericMessage.guid = customerGuid;
-               // genericMessageJson = JsonConvert.SerializeObject(genericMessage);
-                ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
+               
+                await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
 
 
 
@@ -83,7 +84,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 Console.WriteLine(ex.ToString());
 
             }
-            return null;
+            //object genericMessage = null;
+            return genericMessage.msg;
         }
 
 

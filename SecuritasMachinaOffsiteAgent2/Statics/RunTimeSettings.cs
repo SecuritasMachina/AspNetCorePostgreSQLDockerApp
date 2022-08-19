@@ -10,7 +10,7 @@ namespace Common.Statics
     {
         public static string WebListenerURL= "https://securitasmachinacoordinater.azurewebsites.net/";
         public static string SBConnectionString = "";
-        public static string topicNameCustomerGuid;
+        public static string? topicNameCustomerGuid;
         internal static dynamic passPhrase;
     }
 }

@@ -49,7 +49,7 @@ namespace Common.Utils.Comm
             {
                 requestWriter.Write(json);
             }
-
+            Console.WriteLine($"writeToLog {json}");
             try
             {
                 WebResponse webResponse = request.GetResponse();
