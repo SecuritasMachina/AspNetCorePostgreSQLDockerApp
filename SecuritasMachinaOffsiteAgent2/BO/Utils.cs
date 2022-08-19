@@ -1,4 +1,6 @@
-﻿using Common.Utils.Comm;
+﻿using Common.DTO.V2;
+using Common.Utils.Comm;
+using Newtonsoft.Json;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -8,7 +10,49 @@ namespace SecuritasMachinaOffsiteAgent.BO
 {
     public class Utils
     {
-        
+        static string oldGenericMessageJson;
+        static int tLoopCount = 0;
+        public static void doDirListing(string topicCustomerGuid,string pMountedDir)
+        {
+            DirectoryInfo directoryInfo = new DirectoryInfo(pMountedDir);
+            FileInfo[] Files2 = directoryInfo.GetFiles("*"); //Getting Text files
+            //string[] fileArray = Directory.GetFiles(pMountedDir);
+            DirListingDTO dirListingDTO = new DirListingDTO();
+
+            foreach (FileInfo file in Files2)
+            {
+                FileDTO fDTO = new FileDTO();
+                fDTO.FileName = file.Name;
+                fDTO.length = file.Length;
+                long unixTimeMilliseconds = new DateTimeOffset(file.CreationTime).ToUnixTimeMilliseconds();
+                fDTO.FileDate = unixTimeMilliseconds;
+                dirListingDTO.fileDTOs.Add(fDTO);
+
+            }
+            string myJson = JsonConvert.SerializeObject(dirListingDTO);
+            GenericMessage genericMessage = new GenericMessage();
+            GenericMessage.msgTypes msgType = GenericMessage.msgTypes.dirListing;
+            genericMessage.msgType = msgType.ToString();
+            genericMessage.msg = myJson;
+            genericMessage.guid = topicCustomerGuid;
+            string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
+            //TODO Don't send if same
+            if (oldGenericMessageJson==null || !oldGenericMessageJson.Equals(genericMessageJson))
+            {
+               // HTTPUtils.writeToLog(topicCustomerGuid, "TRACE", genericMessageJson);
+                HTTPUtils.putCache(topicCustomerGuid,genericMessage.msgType + "-" + topicCustomerGuid, genericMessageJson);
+                oldGenericMessageJson = genericMessageJson;
+            }
+            else//Refresh every 10 minutes, TODO refresh on demand via message listener
+            {
+                if (tLoopCount < 50)
+                {
+                    oldGenericMessageJson = "RESET";
+                    tLoopCount = 0;
+                }
+                tLoopCount++;
+            }
+        }
         public static byte[] GenerateRandomSalt()
         {
             //Source: http://www.dotnetperls.com/rngcryptoserviceprovider

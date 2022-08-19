@@ -68,13 +68,14 @@ namespace Common.Utils.Comm
             {
                 Console.Out.WriteLine("-----------------");
                 Console.Out.WriteLine(e.Message);
+                HTTPUtils.writeToLog(guid, "ERROR", e.ToString());
             }
         }
 
-        public static void putCache(string messageType, string json)
+        public static void putCache(string topicCustomerGuid, string messageType, string json)
         {
             Console.Out.WriteLine("SendMessage:" + json);
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "/api/v3/putCache/" + messageType);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "api/v3/putCache/" + messageType);
             request.Method = "POST";
             request.ContentType = "application/json";
             request.Accept = "application/json";
@@ -99,6 +100,7 @@ namespace Common.Utils.Comm
             {
                 Console.Out.WriteLine("-----------------");
                 Console.Out.WriteLine(e.Message);
+                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", e.ToString());
             }
         }
     }
