@@ -37,8 +37,7 @@ namespace Common.Utils.Comm
 
         public static void writeToLog(string guid, string messageType, string json)
         {
-            ///api/v3/putLog
-            ///Console.Out.WriteLine("SendMessage:"+json);
+            
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "/api/v3/putLog/" + RunTimeSettings.topicNameCustomerGuid+"/"+ messageType);
             request.Method = "POST";
             request.ContentType = "application/json";
@@ -49,7 +48,7 @@ namespace Common.Utils.Comm
             {
                 requestWriter.Write(json);
             }
-            Console.WriteLine($"writeToLog {json}");
+            HTTPUtils.writeToLog(RunTimeSettings.topicNameCustomerGuid, "INFO", json);
             try
             {
                 WebResponse webResponse = request.GetResponse();

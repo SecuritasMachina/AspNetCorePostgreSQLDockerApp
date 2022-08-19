@@ -26,11 +26,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
     internal class ListenerWorker
     {
 
-        static string topicCustomerGuid = Environment.GetEnvironmentVariable("customerGuid");
-        static string azureBlobEndpoint = Environment.GetEnvironmentVariable("azureBlobEndpoint");
-        static string envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
-        static string azureBlobContainerName = Environment.GetEnvironmentVariable("azureBlobContainerName");
-        static string azureBlobRestoreContainerName = Environment.GetEnvironmentVariable("azureBlobRestoreContainerName");
+        static string? topicCustomerGuid = Environment.GetEnvironmentVariable("customerGuid");
+        static string? azureBlobEndpoint = Environment.GetEnvironmentVariable("azureBlobEndpoint");
+        static string? envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
+        static string? azureBlobContainerName = Environment.GetEnvironmentVariable("azureBlobContainerName");
+        static string? azureBlobRestoreContainerName = Environment.GetEnvironmentVariable("azureBlobRestoreContainerName");
         static int RetentionDays = 45;// Environment.GetEnvironmentVariable("RetentionDays");
 
         static string mountedDir = "/mnt/offsite/";
@@ -139,6 +139,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
+                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", "...Error deleting at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure VM instance has FULL access to Google cloud storage");
                 Console.WriteLine("...Error deleting at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure Blob endpoint and container name match Azure & Access Key URL");
             }
 
