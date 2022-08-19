@@ -72,7 +72,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                
                 await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
                 HTTPUtils.writeToLog(this.customerGuid, "INFO", "Completed encryption, deleted : " + backupName);
-
+                HTTPUtils.putCache(this.customerGuid, backupName+ "-BACKUPFINISHED-" + this.customerGuid, JsonConvert.SerializeObject(genericMessage));
                 Console.WriteLine("Completed encryption, deleted : " + backupName);
                 //TODO send post with status
                 //report progress

@@ -43,7 +43,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         // the processor that reads and processes messages from the queue
         ServiceBusProcessor processor;
-        private int tLoopCount;
+        // private int tLoopCount;
 
         internal async Task startAsync()
         {
@@ -77,7 +77,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             DirectoryInfo directoryInfo = new DirectoryInfo(mountedDir);
             FileInfo[] Files = directoryInfo.GetFiles("*"); //Getting Text files
-            string str = "";
+
             Console.WriteLine("Showing directory listing for " + mountedDir);
             foreach (FileInfo file in Files)
             {
@@ -166,16 +166,17 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 // start processing 
                 await processor.StartProcessingAsync();
-                string oldGenericMessageJson = "";
+                //string oldGenericMessageJson = "";
                 while (true)
                 {
+                    HTTPUtils.writeToLog(topicCustomerGuid, "INFO", $"Scanning azureBlobEndpoint length:{azureBlobEndpoint.Length} azureBlobContainerName:{azureBlobContainerName}");
+
                     try
                     {
                         // Send dir listing to master
                         Utils.doDirListing(topicCustomerGuid, mountedDir);
                         //ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
                         Console.WriteLine("Scanning " + azureBlobEndpoint + " " + azureBlobContainerName);
-                        HTTPUtils.writeToLog(topicCustomerGuid, "INFO", $"Scanning azureBlobEndpoint length:{azureBlobEndpoint.Length} azureBlobContainerName:{azureBlobContainerName}");
                         DirListingDTO dirListingDTO1 = new DirListingDTO();
                         await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
                         {
@@ -183,7 +184,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                             fileDTO.FileName = blobItem.Name;
                             fileDTO.length = blobItem.Properties.ContentLength;
                             fileDTO.FileDate = blobItem.Properties.LastModified.Value.ToUnixTimeMilliseconds();
-                            
+
                             dirListingDTO1.fileDTOs.Add(fileDTO);
                         }
                         ThreadPool.SetMaxThreads(3, 6);
@@ -246,7 +247,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
 
                 Console.WriteLine(msgType);
-                Console.WriteLine($"Received: {body}");
+                //Console.WriteLine($"Received: {body}");
                 if (msgType == "restoreFile")
                 {
                     string inFileName = mountedDir + backupName;
@@ -263,7 +264,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
 
                     HTTPUtils.putCache(customerGUID, genericMessage2.msgType + "-" + customerGUID, genericMessageJson);
-
+                    HTTPUtils.writeToLog(customerGUID, "INFO", genericMessageJson);
                     FileStream inStream = new FileStream(inFileName, FileMode.Open);
                     BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
                     if (azureBlobRestoreContainerName == null)
@@ -288,7 +289,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     genericMessage2.guid = customerGUID;
 
 
-                    HTTPUtils.putCache(customerGUID,genericMessage2.msgType + "-" + customerGUID, JsonConvert.SerializeObject(genericMessage2));
+                    HTTPUtils.putCache(customerGUID, fileDTO.FileName + "-" + genericMessage2.msgType + "-" + customerGUID, JsonConvert.SerializeObject(genericMessage2));
+                    HTTPUtils.writeToLog(customerGUID, "INFO", JsonConvert.SerializeObject(genericMessage2));
                 }
                 else if (msgType == "DirList")
                 {
@@ -308,7 +310,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage2.msg = ex.Message.ToString();
                 genericMessage2.guid = customerGUID;
 
-                HTTPUtils.writeToLog(customerGUID, "ERROR",JsonConvert.SerializeObject(genericMessage2));
+                HTTPUtils.writeToLog(customerGUID, "ERROR", JsonConvert.SerializeObject(genericMessage2));
             }
             // complete the message. message is deleted from the queue. 
             await args.CompleteMessageAsync(args.Message);
