@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 
 using Common.Utils.Comm;
+using System.Web;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
@@ -72,11 +73,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                
                 await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
                 HTTPUtils.writeToLog(this.customerGuid, "INFO", "Completed encryption, deleted : " + backupName);
-                HTTPUtils.putCache(this.customerGuid, backupName+ "-BACKUPFINISHED-" + this.customerGuid, JsonConvert.SerializeObject(genericMessage));
-                Console.WriteLine("Completed encryption, deleted : " + backupName);
-                //TODO send post with status
-                //report progress
-                //worker.CancelAsync();
+                string payload = HttpUtility.UrlEncode(backupName + "-restoreComplete-" + this.customerGuid);
+                HTTPUtils.putCache(this.customerGuid, payload, JsonConvert.SerializeObject(genericMessage));
+                Console.WriteLine("Completed encryption, deleted : " + backupName+ "payload:"+ payload);
+                
             }
             catch (Exception ex)
             {

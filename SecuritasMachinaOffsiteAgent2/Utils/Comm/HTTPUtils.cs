@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 
 namespace Common.Utils.Comm
 {
@@ -74,8 +75,9 @@ namespace Common.Utils.Comm
 
         public static void putCache(string topicCustomerGuid, string messageType, string json)
         {
-            Console.Out.WriteLine("SendMessage:" + json);
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "api/v3/putCache/" + messageType);
+            Console.Out.WriteLine("SendMessage:" + " messageType:" + messageType+" json:"+json);
+            string payload = Uri.EscapeUriString(messageType);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "api/v3/putCache/" + payload);
             request.Method = "POST";
             request.ContentType = "application/json";
             request.Accept = "application/json";
