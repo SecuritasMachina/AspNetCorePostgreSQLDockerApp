@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -31,24 +32,28 @@ namespace Common.Utils.Comm
             RunTimeSettings.passPhrase = stuff.passPhrase;
             RunTimeSettings.SBConnectionString = stuff.ServiceBusEndPoint;
             RunTimeSettings.topicNameCustomerGuid = stuff.topicName;
+            RunTimeSettings.topicCustomerGuid = pCustomerGuid;
 
 
         }
 
-        public static void writeToLog(string guid, string messageType, string json)
+        public static void writeToLog(string? guid, string? messageType, string? json)
         {
-            
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "/api/v3/putLog/" + RunTimeSettings.topicNameCustomerGuid+"/"+ messageType);
+            if (json == null)
+                json = "empty msg";
+            string serializedJson=JsonConvert.SerializeObject(json);
+            Debug.WriteLine($"writeToLog: guid:{guid} messageType:{messageType} json:{json}");
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "api/v3/putLog/" + RunTimeSettings.topicCustomerGuid + "/"+ messageType);
             request.Method = "POST";
             request.ContentType = "application/json";
             request.Accept = "application/json";
-            request.ContentLength = json.Length;
+            request.ContentLength = serializedJson.Length;
             using (Stream webStream = request.GetRequestStream())
             using (StreamWriter requestWriter = new StreamWriter(webStream, System.Text.Encoding.ASCII))
             {
-                requestWriter.Write(json);
+                requestWriter.Write(serializedJson);
             }
-            HTTPUtils.writeToLog(RunTimeSettings.topicNameCustomerGuid, "INFO", json);
+            
             try
             {
                 WebResponse webResponse = request.GetResponse();

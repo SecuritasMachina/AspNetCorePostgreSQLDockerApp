@@ -71,7 +71,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage.guid = customerGuid;
                
                 await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
-
+                HTTPUtils.writeToLog(this.customerGuid, "INFO", "Completed encryption, deleted : " + backupName);
 
 
                 Console.WriteLine("Completed encryption, deleted : " + backupName);

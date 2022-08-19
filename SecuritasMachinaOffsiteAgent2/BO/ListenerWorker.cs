@@ -43,22 +43,26 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         // the processor that reads and processes messages from the queue
         ServiceBusProcessor processor;
+        private int tLoopCount;
+
         internal async Task startAsync()
         {
             try
             {
                 RetentionDays = Int32.Parse(Environment.GetEnvironmentVariable("RetentionDays"));
             }
-            catch (Exception ex) { }
+            catch (Exception ignore) { }
             Console.WriteLine("Starting ListenerWorker azureBlobEndpoint:" + azureBlobEndpoint);
             Console.WriteLine("azureBlobContainerName:" + azureBlobContainerName);
             Console.WriteLine("azureBlobRestoreContainerName:" + azureBlobRestoreContainerName);
             Console.WriteLine("customerGuid:" + topicCustomerGuid);
             Console.WriteLine("RetentionDays:" + RetentionDays);
+
             if (envPassPhrase != null)
                 Console.WriteLine("passPhrase Length:" + envPassPhrase.Length);
 
             HTTPUtils.populateRuntime(topicCustomerGuid);
+            HTTPUtils.writeToLog(topicCustomerGuid, "INFO", $"..azureBlobEndpoint: {azureBlobEndpoint} azureBlobContainerName:{azureBlobContainerName} azureBlobRestoreContainerName:{azureBlobRestoreContainerName} RetentionDays:{RetentionDays} passPhrase Length: {envPassPhrase.Length}");
             if (RunTimeSettings.SBConnectionString == null || RunTimeSettings.SBConnectionString.Length == 0)
             {
                 Console.WriteLine("!!! Unable to retrieve configuration !!!");
@@ -90,6 +94,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
+                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", "Error writing to " + mountedDir + " - Ensure VM instance has full access to cloud storage");
                 Console.WriteLine("...Error writing to " + mountedDir + " - Ensure VM instance has full access to cloud storage");
             }
             Console.Write("Testing reading from " + mountedDir);
@@ -107,6 +112,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
+                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", "Error reading from  " + mountedDir + " - Ensure VM instance has full access to cloud storage");
                 Console.WriteLine("...Error reading from " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
             }
             Console.Write("Testing delete at " + mountedDir);
@@ -118,7 +124,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             catch (Exception ex)
             {
                 HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", "...Error deleting at " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
-                //Console.WriteLine("...Error deleting at " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
+                Console.WriteLine("...Error deleting at " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
             }
             //TODO test dir listing of blob container
             BlobServiceClient blobServiceClient;
@@ -150,7 +156,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 // create a processor that we can use to process the messages
 
                 processor = client.CreateProcessor(topicCustomerGuid, subscriptionName, new ServiceBusProcessorOptions());
-                HTTPUtils.writeToLog(topicCustomerGuid, "INFO", $"Listening on {subscriptionName}");
+                HTTPUtils.writeToLog(topicCustomerGuid, "INFO", $"Listening on {topicCustomerGuid}");
                 Console.WriteLine("Listening");
                 // add handler to process messages
                 processor.ProcessMessageAsync += MessageHandler;
@@ -176,7 +182,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                             fDTO.FileName = file.Name;
                             fDTO.length = file.Length;
                             long unixTimeMilliseconds = new DateTimeOffset(file.CreationTime).ToUnixTimeMilliseconds();
-                            fDTO.FileDate = unixTimeMilliseconds;// file.LastWriteTime.to .ToLongDateString();
+                            fDTO.FileDate = unixTimeMilliseconds;
                             dirListingDTO.fileDTOs.Add(fDTO);
 
                         }
@@ -194,14 +200,26 @@ namespace SecuritasMachinaOffsiteAgent.BO
                             HTTPUtils.putCache(genericMessage.msgType + "-" + topicCustomerGuid, genericMessageJson);
                             oldGenericMessageJson = genericMessageJson;
                         }
+                        else//Refresh every 10 minutes, TODO refresh on demand via message listener
+                        {
+                            if (tLoopCount < 50)
+                            {
+                                oldGenericMessageJson = "RESET";
+                                tLoopCount = 0;
+                            }
+                            tLoopCount++;
+                        }
                         //ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
                         Console.WriteLine("Scanning " + azureBlobEndpoint + " " + azureBlobContainerName);
+                        HTTPUtils.writeToLog(topicCustomerGuid, "INFO", $"Scanning azureBlobEndpoint length:{azureBlobEndpoint.Length} azureBlobContainerName:{azureBlobContainerName}");
                         DirListingDTO dirListingDTO1 = new DirListingDTO();
                         await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
                         {
                             FileDTO fileDTO = new FileDTO();
                             fileDTO.FileName = blobItem.Name;
-                            //fileDTO.FileDate=blobItem.
+                            fileDTO.length = blobItem.Properties.ContentLength;
+                            fileDTO.FileDate = blobItem.Properties.LastModified.Value.ToUnixTimeMilliseconds();
+                            
                             dirListingDTO1.fileDTOs.Add(fileDTO);
                         }
                         ThreadPool.SetMaxThreads(3, 6);
@@ -293,7 +311,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     var outStream = await blockBlobClient.OpenWriteAsync(true);
                     if (envPassPhrase != null)
                         passPhrase = envPassPhrase;
-                    new Utils().AES_DecryptStream(inStream, outStream, passPhrase);
+                    new Utils().AES_DecryptStream(topicCustomerGuid, inStream, outStream, passPhrase);
                     //FileDTO fileDTO = new FileDTO();
                     fileDTO.FileName = backupName;
                     fileDTO.Status = "Success";
