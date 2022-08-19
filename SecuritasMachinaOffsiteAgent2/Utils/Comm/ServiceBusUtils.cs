@@ -27,8 +27,10 @@ namespace Common.Utils.Comm
                 ServiceBusMessageBatch messageBatch = await sender.CreateMessageBatchAsync();
                 messageBatch.TryAddMessage(new ServiceBusMessage(myJson));
                 await sender.SendMessagesAsync(messageBatch);
+                  HTTPUtils.writeToLog(RunTimeSettings.topicNameCustomerGuid, "INFO","Sent " + myJson.Length + " bytes to message handler");
                 //Console.WriteLine("Posting " + myJson);
-            }catch(Exception ex)
+            }
+            catch(Exception ex)
             {
                 Console.WriteLine(ex.ToString());
             }

@@ -34,7 +34,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         }
 
 
-        public void start()
+        public  Task startAsync()
         {
             // Create a BlobServiceClient object which will be used to create a container client
             try
@@ -68,7 +68,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage.msg = myJson;
                 genericMessage.guid = customerGuid;
                 string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
-                ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
+                 ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
 
                 
                

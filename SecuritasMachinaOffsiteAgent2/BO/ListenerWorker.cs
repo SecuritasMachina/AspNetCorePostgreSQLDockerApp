@@ -148,6 +148,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 // create a processor that we can use to process the messages
 
                 processor = client.CreateProcessor(topicCustomerGuid, subscriptionName, new ServiceBusProcessorOptions());
+                HTTPUtils.writeToLog(topicCustomerGuid, "INFO", $"Listening on {subscriptionName}");
                 Console.WriteLine("Listening");
                 // add handler to process messages
                 processor.ProcessMessageAsync += MessageHandler;
@@ -187,7 +188,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         //TODO Don't send if same
                         if (!oldGenericMessageJson.Equals(genericMessageJson))
                         {
-                            HTTPUtils.SendMessage(genericMessage.msgType + "-" + topicCustomerGuid, genericMessageJson);
+                            HTTPUtils.writeToLog(topicCustomerGuid, "TRACE", genericMessageJson);
+                            HTTPUtils.putCache(genericMessage.msgType + "-" + topicCustomerGuid, genericMessageJson);
                             oldGenericMessageJson = genericMessageJson;
                         }
                         //ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
@@ -211,7 +213,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                 BackupWorker backupWorker = new BackupWorker(topicCustomerGuid, azureBlobEndpoint, azureBlobContainerName, fileDTO.FileName, envPassPhrase);
                                 ThreadPool.QueueUserWorkItem(x =>
                                 {
-                                    backupWorker.start();
+                                    backupWorker.startAsync();
                                     countdownEvent.Signal();
                                 });
                             }
@@ -221,6 +223,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     }
                     catch (Exception ex)
                     {
+                        HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", $"Listening on topicCustomerGuid:{topicCustomerGuid}, subscriptionName:{subscriptionName} {ex.Message}");
                         Console.WriteLine(ex.Message);
                     }
 
@@ -239,7 +242,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         public static void RunBackup(object s)
         {
             BackupWorker say = s as BackupWorker;
-            say.start();
+            say.startAsync();
             //Console.WriteLine(say);
         }
         // handle received messages
@@ -274,7 +277,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     genericMessage2.guid = customerGUID;
                     string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
 
-                    HTTPUtils.SendMessage(genericMessage2.msgType + "-" + customerGUID, genericMessageJson);
+                    HTTPUtils.putCache(genericMessage2.msgType + "-" + customerGUID, genericMessageJson);
 
                     FileStream inStream = new FileStream(inFileName, FileMode.Open);
                     BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
@@ -300,7 +303,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     genericMessage2.guid = customerGUID;
                     
 
-                    HTTPUtils.SendMessage(genericMessage2.msgType + "-" + customerGUID, JsonConvert.SerializeObject(genericMessage2));
+                    HTTPUtils.putCache(genericMessage2.msgType + "-" + customerGUID, JsonConvert.SerializeObject(genericMessage2));
                 }
                 else if (msgType == "Error")
                 {
@@ -316,7 +319,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage2.msg = ex.Message.ToString();
                 genericMessage2.guid = customerGUID;
                
-                HTTPUtils.SendMessage(customerGUID, JsonConvert.SerializeObject(genericMessage2));
+                HTTPUtils.putCache(customerGUID, JsonConvert.SerializeObject(genericMessage2));
             }
             // complete the message. message is deleted from the queue. 
             await args.CompleteMessageAsync(args.Message);

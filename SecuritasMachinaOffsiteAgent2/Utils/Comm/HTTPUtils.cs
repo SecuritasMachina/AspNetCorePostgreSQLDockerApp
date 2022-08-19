@@ -34,12 +34,12 @@ namespace Common.Utils.Comm
 
 
         }
-        
-             public static void writeToLog(string guid,string messageType, string json)
+
+        public static void writeToLog(string guid, string messageType, string json)
         {
             ///api/v3/putLog
             ///Console.Out.WriteLine("SendMessage:"+json);
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "/api/v3/putLog/" + RunTimeSettings.topicNameCustomerGuid);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "/api/v3/putLog/" + RunTimeSettings.topicNameCustomerGuid+"/"+ messageType);
             request.Method = "POST";
             request.ContentType = "application/json";
             request.Accept = "application/json";
@@ -66,11 +66,11 @@ namespace Common.Utils.Comm
                 Console.Out.WriteLine(e.Message);
             }
         }
-    }
-        public static void SendMessage(string messageType,string json)
+
+        public static void putCache(string messageType, string json)
         {
-            Console.Out.WriteLine("SendMessage:"+json);
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL+ "/api/v3/putCache/" + messageType);
+            Console.Out.WriteLine("SendMessage:" + json);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "/api/v3/putCache/" + messageType);
             request.Method = "POST";
             request.ContentType = "application/json";
             request.Accept = "application/json";
@@ -99,3 +99,4 @@ namespace Common.Utils.Comm
         }
     }
 }
+
