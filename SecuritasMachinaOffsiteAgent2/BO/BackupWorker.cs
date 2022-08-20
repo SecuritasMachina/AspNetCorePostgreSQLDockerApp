@@ -53,11 +53,22 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 //Store directly on fusepath
                 string outFileName = "/mnt/offsite/" + backupName + ".enc";
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                int generationCount = 1;
+                string basebackupName = backupName;
+                while (true)
                 {
-                    outFileName = "c:\\temp\\" + backupName + ".enc";
-                }
 
+                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                    {
+                        outFileName = "c:\\temp\\" + backupName + ".enc";
+                    }
+                    if (File.Exists(outFileName))
+                    {
+                        backupName = basebackupName + generationCount;
+                        generationCount++;
+                    }
+                    else { break; }
+                }
                 new Utils().AES_EncryptStream(inStream, outFileName, passPhrase);
                 //Delete bacpac file on Azure 
                 blobClient.Delete();
@@ -65,18 +76,19 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 fileDTO.FileName = backupName;
                 fileDTO.Status = "Success";
                 string myJson = JsonConvert.SerializeObject(fileDTO);
-               
+
                 GenericMessage.msgTypes msgType = GenericMessage.msgTypes.backupComplete;
                 genericMessage.msgType = msgType.ToString();
                 genericMessage.msg = myJson;
                 genericMessage.guid = customerGuid;
-               
-                await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
+
+                //await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
                 HTTPUtils.writeToLog(this.customerGuid, "INFO", "Completed encryption, deleted : " + backupName);
+                HTTPUtils.writeBackpHpistory(this.customerGuid, backupName,null);
                 string payload = HttpUtility.UrlEncode(backupName + "-restoreComplete-" + this.customerGuid);
                 HTTPUtils.putCache(this.customerGuid, payload, JsonConvert.SerializeObject(genericMessage));
-                Console.WriteLine("Completed encryption, deleted : " + backupName+ "payload:"+ payload);
-                
+                Console.WriteLine("Completed encryption, deleted : " + backupName + "payload:" + payload);
+
             }
             catch (Exception ex)
             {

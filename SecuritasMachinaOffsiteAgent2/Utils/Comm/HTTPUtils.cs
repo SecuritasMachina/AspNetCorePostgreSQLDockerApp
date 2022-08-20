@@ -72,7 +72,40 @@ namespace Common.Utils.Comm
                 //HTTPUtils.writeToLog(guid, "ERROR", e.ToString());
             }
         }
+        public static void writeBackpHpistory(string? guid, string? backupFile, string? json)
+        {
+            if (json == null)
+                json = "empty msg";
+            string serializedJson = JsonConvert.SerializeObject(json);
+            Debug.WriteLine($"writeToLog: guid:{guid} backupFile:{backupFile} json:{json}");
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "api/v3/postBackupHistory/" + RunTimeSettings.topicCustomerGuid + "/" + Uri.EscapeUriString( backupFile));
+            request.Method = "POST";
+            request.ContentType = "application/json";
+            request.Accept = "application/json";
+            request.ContentLength = serializedJson.Length;
+            using (Stream webStream = request.GetRequestStream())
+            using (StreamWriter requestWriter = new StreamWriter(webStream, System.Text.Encoding.ASCII))
+            {
+                requestWriter.Write(serializedJson);
+            }
 
+            try
+            {
+                WebResponse webResponse = request.GetResponse();
+                using (Stream webStream = webResponse.GetResponseStream() ?? Stream.Null)
+                using (StreamReader responseReader = new StreamReader(webStream))
+                {
+                    string response = responseReader.ReadToEnd();
+                    Console.Out.WriteLine(response);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.Out.WriteLine("-----------------");
+                Console.Out.WriteLine(e.Message);
+                //HTTPUtils.writeToLog(guid, "ERROR", e.ToString());
+            }
+        }
         public static void putCache(string topicCustomerGuid, string messageType, string json)
         {
             Console.Out.WriteLine("SendMessage:" + " messageType:" + messageType+" json:"+json);
