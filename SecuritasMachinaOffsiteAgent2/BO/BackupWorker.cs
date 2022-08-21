@@ -69,6 +69,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     }
                     else { break; }
                 }
+                long startTimeStamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
+
                 new Utils().AES_EncryptStream(inStream, outFileName, passPhrase);
                 FileInfo fi = new FileInfo(outFileName);
                 //Delete bacpac file on Azure 
@@ -85,7 +87,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 //await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
                 HTTPUtils.writeToLog(this.customerGuid, "INFO", "Completed encryption, deleted : " + backupName);
-                HTTPUtils.writeBackupHistory(this.customerGuid, basebackupName,backupName, fi.Length);
+                HTTPUtils.writeBackupHistory(this.customerGuid, basebackupName,backupName, fi.Length, startTimeStamp);
                 string payload = HttpUtility.UrlEncode(backupName + "-restoreComplete-" + this.customerGuid);
                 HTTPUtils.putCache(this.customerGuid, payload, JsonConvert.SerializeObject(genericMessage));
                 Console.WriteLine("Completed encryption, deleted : " + backupName + "payload:" + payload);

@@ -72,12 +72,12 @@ namespace Common.Utils.Comm
                 //HTTPUtils.writeToLog(guid, "ERROR", e.ToString());
             }
         }
-        public static void writeBackupHistory(string? guid, string? backupFile, string newFileName, long fileLength)
+        public static void writeBackupHistory(string? guid, string? backupFile, string newFileName, long fileLength,long startTimeStamp)
         {
 
             //string serializedJson = JsonConvert.SerializeObject(json);
             //Debug.WriteLine($"writeToLog: guid:{guid} backupFile:{backupFile} json:{json}");
-            string url = RunTimeSettings.WebListenerURL + "api/v3/postBackupHistory/" + RunTimeSettings.topicCustomerGuid + "/" + Uri.EscapeUriString(backupFile) + "/" + Uri.EscapeUriString(newFileName) + "/" + fileLength;
+            string url = RunTimeSettings.WebListenerURL + "api/v3/postBackupHistory/" + RunTimeSettings.topicCustomerGuid + "/" + Uri.EscapeUriString(backupFile) + "/" + Uri.EscapeUriString(newFileName) + "/" + fileLength+"/"+ startTimeStamp;
             try
             {
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
