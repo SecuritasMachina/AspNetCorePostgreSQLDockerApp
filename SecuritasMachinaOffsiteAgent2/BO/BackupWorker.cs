@@ -64,7 +64,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     }
                     if (File.Exists(outFileName))
                     {
-                        backupName = basebackupName + generationCount;
+                        backupName = basebackupName +"-" +generationCount;
                         generationCount++;
                     }
                     else { break; }
