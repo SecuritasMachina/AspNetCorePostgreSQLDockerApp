@@ -12,10 +12,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
     {
         static string oldGenericMessageJson;
         static int tLoopCount = 0;
-        public static void doDirListing(string topicCustomerGuid,string pMountedDir)
+        public static void doDirListing(string topiccustomerGuid,string pMountedDir)
         {
             DirectoryInfo directoryInfo = new DirectoryInfo(pMountedDir);
-            FileInfo[] Files2 = directoryInfo.GetFiles("*"); //Getting Text files
+            List<FileInfo> Files2 = directoryInfo.GetFiles("*")
+                                                              .OrderByDescending(f => f.LastWriteTime)
+                                                              .ToList();
+            ; //Getting Text files
             //string[] fileArray = Directory.GetFiles(pMountedDir);
             DirListingDTO dirListingDTO = new DirListingDTO();
 
@@ -34,13 +37,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
             GenericMessage.msgTypes msgType = GenericMessage.msgTypes.dirListing;
             genericMessage.msgType = msgType.ToString();
             genericMessage.msg = myJson;
-            genericMessage.guid = topicCustomerGuid;
+            genericMessage.guid = topiccustomerGuid;
             string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
             //TODO Don't send if same
             if (oldGenericMessageJson==null || !oldGenericMessageJson.Equals(genericMessageJson))
             {
-               // HTTPUtils.writeToLog(topicCustomerGuid, "TRACE", genericMessageJson);
-                HTTPUtils.putCache(topicCustomerGuid,genericMessage.msgType + "-" + topicCustomerGuid, genericMessageJson);
+               
+                HTTPUtils.Instance.putCache(topiccustomerGuid,genericMessage.msgType + "-" + topiccustomerGuid, genericMessageJson);
                 oldGenericMessageJson = genericMessageJson;
             }
             else//Refresh every 10 minutes, TODO refresh on demand via message listener
@@ -130,7 +133,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 fsCrypt.Close();
             }
         }
-        public void AES_DecryptStream(string topicCustomerGuid,Stream fsCrypt, Stream fsOut, string password)
+        public void AES_DecryptStream(string topiccustomerGuid,Stream fsCrypt, Stream fsOut, string pInfileName, string password)
         {
             //todo:
             // - create error message on wrong password
@@ -163,20 +166,23 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             try
             {
+                long tGB = 0;
                 while ((read = cs.Read(buffer, 0, buffer.Length)) > 0)
                 {
                     //Application.DoEvents();
+                    tGB++;
                     fsOut.Write(buffer, 0, read);
+                    //HTTPUtils.Instance.writeToLog(topiccustomerGuid, "TRACE", $"...Decypted {tGB} GB of {pInfileName}");
                 }
             }
             catch (CryptographicException ex_CryptographicException)
             {
                 Debug.WriteLine("CryptographicException error: " + ex_CryptographicException.Message);
-                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", $"...Error AES Decypt {ex_CryptographicException.Message.ToString()}, check passphrase");
+                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", $"...Error AES Decypt {ex_CryptographicException.Message.ToString()}, check passphrase");
             }
             catch (Exception ex)
             {
-                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", $"...Error AES Decypt {ex.Message.ToString()}");
+                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", $"...Error AES Decypt {ex.Message.ToString()}");
                 
             }
 

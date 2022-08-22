@@ -11,9 +11,9 @@ namespace Common.Statics
     {
         
         public static string SBConnectionString = "";
-        public static string? topicNameCustomerGuid;
+        public static string? topicNamecustomerGuid;
         internal static dynamic passPhrase;
-        internal static string topicCustomerGuid;
+        internal static string topiccustomerGuid;
 
         public static string WebListenerURL
         {

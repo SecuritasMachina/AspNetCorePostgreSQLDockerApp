@@ -26,7 +26,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
     internal class ListenerWorker
     {
 
-        static string? topicCustomerGuid = Environment.GetEnvironmentVariable("customerGuid");
+        static string? topiccustomerGuid = Environment.GetEnvironmentVariable("customerGuid");
         static string? azureBlobEndpoint = Environment.GetEnvironmentVariable("azureBlobEndpoint");
         static string? envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
         static string? azureBlobContainerName = Environment.GetEnvironmentVariable("azureBlobContainerName");
@@ -55,14 +55,14 @@ namespace SecuritasMachinaOffsiteAgent.BO
             Console.WriteLine("Starting ListenerWorker azureBlobEndpoint:" + azureBlobEndpoint);
             Console.WriteLine("azureBlobContainerName:" + azureBlobContainerName);
             Console.WriteLine("azureBlobRestoreContainerName:" + azureBlobRestoreContainerName);
-            Console.WriteLine("customerGuid:" + topicCustomerGuid);
+            Console.WriteLine("customerGuid:" + topiccustomerGuid);
             Console.WriteLine("RetentionDays:" + RetentionDays);
 
             if (envPassPhrase != null)
                 Console.WriteLine("passPhrase Length:" + envPassPhrase.Length);
 
-            HTTPUtils.populateRuntime(topicCustomerGuid);
-            HTTPUtils.writeToLog(topicCustomerGuid, "INFO", $"..azureBlobEndpoint length: {azureBlobEndpoint.Length} azureBlobContainerName:{azureBlobContainerName} azureBlobRestoreContainerName:{azureBlobRestoreContainerName} RetentionDays:{RetentionDays} passPhrase Length: {envPassPhrase.Length}");
+            HTTPUtils.Instance.populateRuntime(topiccustomerGuid);
+            HTTPUtils.Instance.writeToLog(topiccustomerGuid, "INFO", $"..azureBlobEndpoint length: {azureBlobEndpoint.Length} azureBlobContainerName:{azureBlobContainerName} azureBlobRestoreContainerName:{azureBlobRestoreContainerName} RetentionDays:{RetentionDays} passPhrase Length: {envPassPhrase.Length}");
             if (RunTimeSettings.SBConnectionString == null || RunTimeSettings.SBConnectionString.Length == 0)
             {
                 Console.WriteLine("!!! Unable to retrieve configuration !!!");
@@ -94,7 +94,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", "Error writing to " + mountedDir + " - Ensure VM instance has full access to cloud storage");
+                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", "Error writing to " + mountedDir + " - Ensure VM instance has full access to cloud storage");
                 Console.WriteLine("...Error writing to " + mountedDir + " - Ensure VM instance has full access to cloud storage");
             }
             Console.Write("Testing reading from " + mountedDir);
@@ -112,7 +112,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", "Error reading from  " + mountedDir + " - Ensure VM instance has full access to cloud storage");
+                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", "Error reading from  " + mountedDir + " - Ensure VM instance has full access to cloud storage");
                 Console.WriteLine("...Error reading from " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
             }
             Console.Write("Testing delete at " + mountedDir);
@@ -123,7 +123,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", "...Error deleting at " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
+                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", "...Error deleting at " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
                 Console.WriteLine("...Error deleting at " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
             }
             //TODO test dir listing of blob container
@@ -145,7 +145,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", "...Error deleting at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure VM instance has FULL access to Google cloud storage");
+                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", "...Error deleting at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure VM instance has FULL access to Google cloud storage");
                 Console.WriteLine("...Error deleting at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure Blob endpoint and container name match Azure & Access Key URL");
             }
 
@@ -155,8 +155,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
                 // create a processor that we can use to process the messages
 
-                processor = client.CreateProcessor(topicCustomerGuid, subscriptionName, new ServiceBusProcessorOptions());
-                HTTPUtils.writeToLog(topicCustomerGuid, "INFO", $"Listening on {topicCustomerGuid}");
+                processor = client.CreateProcessor(topiccustomerGuid, subscriptionName, new ServiceBusProcessorOptions());
+                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "INFO", $"Listening on {topiccustomerGuid}");
                 Console.WriteLine("Listening");
                 // add handler to process messages
                 processor.ProcessMessageAsync += MessageHandler;
@@ -169,12 +169,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 //string oldGenericMessageJson = "";
                 while (true)
                 {
-                    HTTPUtils.writeToLog(topicCustomerGuid, "INFO", $"Scanning azureBlobEndpoint length:{azureBlobEndpoint.Length} azureBlobContainerName:{azureBlobContainerName}");
+                    HTTPUtils.Instance.writeToLog(topiccustomerGuid, "TRACE", $"Scanning azureBlobEndpoint length:{azureBlobEndpoint.Length} azureBlobContainerName:{azureBlobContainerName}");
 
                     try
                     {
                         // Send dir listing to master
-                        Utils.doDirListing(topicCustomerGuid, mountedDir);
+                        Utils.doDirListing(topiccustomerGuid, mountedDir);
+                        
                         //ServiceBusUtils.postMsg2ControllerAsync(genericMessageJson);
                         Console.WriteLine("Scanning " + azureBlobEndpoint + " " + azureBlobContainerName);
                         DirListingDTO dirListingDTO1 = new DirListingDTO();
@@ -187,16 +188,17 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                             dirListingDTO1.fileDTOs.Add(fileDTO);
                         }
+                        HTTPUtils.Instance.sendAgentDir(topiccustomerGuid, dirListingDTO1);
                         ThreadPool.SetMaxThreads(3, 6);
                         using (var countdownEvent = new CountdownEvent(dirListingDTO1.fileDTOs.Count))
                         {
                             foreach (FileDTO fileDTO in dirListingDTO1.fileDTOs)
                             {
                                 Console.WriteLine("\t" + fileDTO.FileName);
-                                HTTPUtils.writeToLog(topicCustomerGuid, "INFO", $"Started {fileDTO.FileName}");
+                                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "INFO", $"Started {fileDTO.FileName}");
 
                                 // spawn workers for files
-                                BackupWorker backupWorker = new BackupWorker(topicCustomerGuid, azureBlobEndpoint, azureBlobContainerName, fileDTO.FileName, envPassPhrase);
+                                BackupWorker backupWorker = new BackupWorker(topiccustomerGuid, azureBlobEndpoint, azureBlobContainerName, fileDTO.FileName, envPassPhrase);
                                 ThreadPool.QueueUserWorkItem(x =>
                                 {
                                     backupWorker.StartAsync();
@@ -209,7 +211,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     }
                     catch (Exception ex)
                     {
-                        HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", $"Listening on topicCustomerGuid:{topicCustomerGuid}, subscriptionName:{subscriptionName} {ex.Message}");
+                        HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", $"Listening on topiccustomerGuid:{topiccustomerGuid}, subscriptionName:{subscriptionName} {ex.Message}");
                         Console.WriteLine(ex.Message);
                     }
 
@@ -235,7 +237,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         static async Task MessageHandler(ProcessMessageEventArgs args)
         {
             string body = args.Message.Body.ToString();
-            string customerGUID = topicCustomerGuid;
+            string customerGuid = topiccustomerGuid;
             try
             {
                 GenericMessage genericMessage = JsonConvert.DeserializeObject<GenericMessage>(body);
@@ -246,55 +248,20 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 string passPhrase = "";
 
 
-                Console.WriteLine(msgType);
+                
                 //Console.WriteLine($"Received: {body}");
                 if (msgType == "restoreFile")
                 {
+                    //Console.WriteLine("Starting Restore for:" + backupName);
+                    
                     string inFileName = mountedDir + backupName;
-                    FileDTO fileDTO = new FileDTO();
-                    fileDTO.FileName = backupName;
-                    fileDTO.Status = "InProgress";
-                    //fileDTO.length = outStream.Length;
-                    string myJson = JsonConvert.SerializeObject(fileDTO);
-                    GenericMessage genericMessage2 = new GenericMessage();
-
-                    genericMessage2.msgType = "restoreRequest";
-                    genericMessage2.msg = myJson;
-                    genericMessage2.guid = customerGUID;
-                    string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
-
-                    HTTPUtils.putCache(customerGUID, genericMessage2.msgType + "-" + customerGUID, genericMessageJson);
-                    HTTPUtils.writeToLog(customerGUID, "INFO", genericMessageJson);
-                    FileStream inStream = new FileStream(inFileName, FileMode.Open);
-                    BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
-                    if (azureBlobRestoreContainerName == null)
-                        azureBlobRestoreContainerName = "restored";
-                    BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(azureBlobRestoreContainerName);
-
-                    string restoreFileName = backupName.Substring(0, backupName.LastIndexOf("."));
-                    var blockBlobClient = containerClient.GetBlobClient(restoreFileName);
-                    var outStream = await blockBlobClient.OpenWriteAsync(true);
-                    if (envPassPhrase != null)
-                        passPhrase = envPassPhrase;
-                    new Utils().AES_DecryptStream(topicCustomerGuid, inStream, outStream, passPhrase);
-                    //FileDTO fileDTO = new FileDTO();
-                    fileDTO.FileName = backupName;
-                    fileDTO.Status = "Success";
-                    //fileDTO.length = outStream.Length;
-                    myJson = JsonConvert.SerializeObject(fileDTO);
-                    genericMessage2 = new GenericMessage();
-
-                    genericMessage2.msgType = "restoreComplete";
-                    genericMessage2.msg = myJson;
-                    genericMessage2.guid = customerGUID;
-
-
-                    HTTPUtils.putCache(customerGUID, fileDTO.FileName + "-" + genericMessage2.msgType + "-" + customerGUID, JsonConvert.SerializeObject(genericMessage2));
-                    HTTPUtils.writeToLog(customerGUID, "INFO", JsonConvert.SerializeObject(genericMessage2));
+                    RestoreWorker backupWorker = new RestoreWorker(topiccustomerGuid, azureBlobRestoreContainerName,azureBlobEndpoint, azureBlobContainerName, inFileName, envPassPhrase);
+                    backupWorker.StartAsync();
+                    
                 }
                 else if (msgType == "DirList")
                 {
-                    Utils.doDirListing(topicCustomerGuid, mountedDir);
+                    Utils.doDirListing(topiccustomerGuid, mountedDir);
                 }
                 else if (msgType == "Error")
                 {
@@ -308,9 +275,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 genericMessage2.msgType = "restoreComplete";
                 genericMessage2.msg = ex.Message.ToString();
-                genericMessage2.guid = customerGUID;
+                genericMessage2.guid = customerGuid;
 
-                HTTPUtils.writeToLog(customerGUID, "ERROR", JsonConvert.SerializeObject(genericMessage2));
+                HTTPUtils.Instance.writeToLog(customerGuid, "ERROR", ex.Message.ToString());
             }
             // complete the message. message is deleted from the queue. 
             await args.CompleteMessageAsync(args.Message);

@@ -23,11 +23,11 @@ namespace Common.Utils.Comm
                 if (client == null)
                     client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
                 if (sender == null)
-                    sender = client.CreateSender(RunTimeSettings.topicNameCustomerGuid);
+                    sender = client.CreateSender(RunTimeSettings.topicNamecustomerGuid);
                 ServiceBusMessageBatch messageBatch = await sender.CreateMessageBatchAsync();
                 messageBatch.TryAddMessage(new ServiceBusMessage(myJson));
                 await sender.SendMessagesAsync(messageBatch);
-                HTTPUtils.writeToLog(RunTimeSettings.topicNameCustomerGuid, "INFO", "Sent " + myJson.Length + " bytes to message handler");
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicNamecustomerGuid, "INFO", "Sent " + myJson.Length + " bytes to message handler");
                 //Console.WriteLine("Posting " + myJson);
             }
             catch (Exception ex)
