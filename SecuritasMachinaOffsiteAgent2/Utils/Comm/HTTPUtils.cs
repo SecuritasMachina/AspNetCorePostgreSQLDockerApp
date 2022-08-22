@@ -96,6 +96,7 @@ namespace Common.Utils.Comm
             {
                 Console.Out.WriteLine("-----------------");
                 Console.Out.WriteLine(e.Message);
+                writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", e.ToString());
                 //HTTPUtils.writeToLog(guid, "ERROR", e.ToString());
             }
         }
@@ -128,7 +129,7 @@ namespace Common.Utils.Comm
             {
                 Console.Out.WriteLine("-----------------");
                 Console.Out.WriteLine(e.Message);
-                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", e.ToString());
+                HTTPUtils.writeToLog(topicCustomerGuid, "ERROR", e.ToString()+"Parameters: "+$"{topicCustomerGuid},  {messageType},  {json}");
             }
         }
     }

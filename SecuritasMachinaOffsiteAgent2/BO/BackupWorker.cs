@@ -57,7 +57,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 string basebackupName = backupName;
                 while (true)
                 {
-
+                    if (generationCount > 100)
+                    {
+                        break;
+                    }
                     if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     {
                         outFileName = "c:\\temp\\" + backupName + ".enc";
@@ -88,7 +91,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 //await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
                 HTTPUtils.writeToLog(this.customerGuid, "INFO", "Completed encryption, deleted : " + backupName);
                 HTTPUtils.writeBackupHistory(this.customerGuid, basebackupName,backupName, fi.Length, startTimeStamp);
-                string payload = HttpUtility.UrlEncode(backupName + "-restoreComplete-" + this.customerGuid);
+                string payload = HttpUtility.UrlEncode(backupName + "-backupComplete-" + this.customerGuid);
                 HTTPUtils.putCache(this.customerGuid, payload, JsonConvert.SerializeObject(genericMessage));
                 Console.WriteLine("Completed encryption, deleted : " + backupName + "payload:" + payload);
 
