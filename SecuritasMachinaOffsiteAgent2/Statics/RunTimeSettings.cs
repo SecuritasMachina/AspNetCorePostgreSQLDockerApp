@@ -10,10 +10,13 @@ namespace Common.Statics
     public class RunTimeSettings
     {
         
-        public static string SBConnectionString = "";
+        public static string? SBConnectionString = "";
         public static string? topicNamecustomerGuid;
-        internal static dynamic passPhrase;
-        internal static string topiccustomerGuid;
+        public static string? passPhrase;
+        public static string? topicCustomerGuid;
+        public static string? authKey;
+        public static string? clientSubscriptionName;
+        public static string? controllerTopicName;
 
         public static string WebListenerURL
         {

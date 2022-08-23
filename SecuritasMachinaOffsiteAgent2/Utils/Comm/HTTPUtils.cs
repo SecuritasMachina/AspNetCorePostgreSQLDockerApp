@@ -39,19 +39,22 @@ namespace Common.Utils.Comm
                 };
                 _client = new HttpClient(handler);
             }
-            _client.BaseAddress = new Uri("https://securitasmachinacoordinater.azurewebsites.net");
+            _client.BaseAddress = new Uri(RunTimeSettings.WebListenerURL);
         }
         public void populateRuntime(string pcustomerGuid)
         {
 
-            HttpResponseMessage response = _client.GetAsync("/api/v2/config/" + pcustomerGuid).Result;
+            HttpResponseMessage response = _client.GetAsync("api/v2/config/" + pcustomerGuid).Result;
             response.EnsureSuccessStatusCode();
             string result = response.Content.ReadAsStringAsync().Result;
             dynamic stuff = JsonConvert.DeserializeObject(result);
-            RunTimeSettings.passPhrase = stuff.passPhrase;
-            RunTimeSettings.SBConnectionString = stuff.ServiceBusEndPoint;
+             
+            RunTimeSettings.SBConnectionString = stuff.serviceBusEndPoint;
             RunTimeSettings.topicNamecustomerGuid = stuff.topicName;
-            RunTimeSettings.topiccustomerGuid = pcustomerGuid;
+            RunTimeSettings.topicCustomerGuid = pcustomerGuid;
+            RunTimeSettings.authKey=stuff.authKey;
+            RunTimeSettings.controllerTopicName = stuff.controllerTopicName;
+            RunTimeSettings.clientSubscriptionName = stuff.clientSubscriptionName;
 
 
         }
@@ -62,11 +65,12 @@ namespace Common.Utils.Comm
                 json = "empty msg";
             string serializedJson = JsonConvert.SerializeObject(json);
             Console.WriteLine($"writeToLog: guid:{guid} messageType:{messageType} json:{json}");
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "api/v3/putLog/" + RunTimeSettings.topiccustomerGuid + "/" + messageType);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "api/v3/putLog/" + RunTimeSettings.topicCustomerGuid + "/" + messageType);
             request.Method = "POST";
             request.ContentType = "application/json";
             request.Accept = "application/json";
             request.ContentLength = serializedJson.Length;
+            request.Headers.Add("AuthKey", RunTimeSettings.authKey);
             using (Stream webStream = request.GetRequestStream())
             using (StreamWriter requestWriter = new StreamWriter(webStream, System.Text.Encoding.ASCII))
             {
@@ -95,12 +99,12 @@ namespace Common.Utils.Comm
 
             //string serializedJson = JsonConvert.SerializeObject(json);
             //Debug.WriteLine($"writeToLog: guid:{guid} backupFile:{backupFile} json:{json}");
-            string url = RunTimeSettings.WebListenerURL + "api/v3/postBackupHistory/" + RunTimeSettings.topiccustomerGuid + "/" + Uri.EscapeUriString(backupFile) + "/" + Uri.EscapeUriString(newFileName) + "/" + fileLength + "/" + startTimeStamp;
+            string url = RunTimeSettings.WebListenerURL + "api/v3/postBackupHistory/" + RunTimeSettings.topicCustomerGuid + "/" + Uri.EscapeUriString(backupFile) + "/" + Uri.EscapeUriString(newFileName) + "/" + fileLength + "/" + startTimeStamp;
             try
             {
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
                 request.AutomaticDecompression = DecompressionMethods.GZip;
-
+                request.Headers.Add("AuthKey", RunTimeSettings.authKey);
                 using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
                 using (Stream stream = response.GetResponseStream())
                 using (StreamReader reader = new StreamReader(stream))
@@ -114,7 +118,7 @@ namespace Common.Utils.Comm
             {
                 Console.Out.WriteLine("-----------------");
                 Console.Out.WriteLine(e.Message);
-                writeToLog(RunTimeSettings.topiccustomerGuid, "ERROR", e.ToString());
+                writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", e.ToString());
                 //HTTPUtils.instance.writeToLog(guid, "ERROR", e.ToString());
             }
         }
@@ -129,6 +133,8 @@ namespace Common.Utils.Comm
                 request.ContentType = "application/json";
                 request.Accept = "application/json";
                 request.ContentLength = json.Length;
+                request.Headers.Add("AuthKey", RunTimeSettings.authKey);
+
                 using (Stream webStream = request.GetRequestStream())
                 using (StreamWriter requestWriter = new StreamWriter(webStream, System.Text.Encoding.ASCII))
                 {
@@ -157,7 +163,7 @@ namespace Common.Utils.Comm
             try
             {
                 var stringContent = new StringContent(JsonConvert.SerializeObject(dirListingDTO1), Encoding.UTF8, "application/json");
-
+                _client.DefaultRequestHeaders.Add("AuthKey", RunTimeSettings.authKey);
                 HttpResponseMessage response = _client.PutAsync("/api/v3/agentDir/" + topiccustomerGuid, stringContent).Result;
                 response.EnsureSuccessStatusCode();
                 string result = response.Content.ReadAsStringAsync().Result;
