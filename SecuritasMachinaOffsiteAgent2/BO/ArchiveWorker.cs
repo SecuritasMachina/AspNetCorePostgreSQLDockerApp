@@ -22,25 +22,28 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         public async Task<object> StartAsync()
         {
-            HTTPUtils.Instance.writeToLog(this.customerGuid, "TRACE", $"Scanning {inPath} for Last Write Time over {retentionDays} old");
-            DirectoryInfo directoryInfo = new DirectoryInfo(inPath);
-            List<FileInfo> Files2 = directoryInfo.GetFiles("*").ToList();
-
-            try
+            while (true)
             {
-                foreach (FileInfo file in Files2)
+                HTTPUtils.Instance.writeToLog(this.customerGuid, "TRACE", $"Scanning {inPath} for Last Write Time over {retentionDays} old");
+                DirectoryInfo directoryInfo = new DirectoryInfo(inPath);
+                List<FileInfo> Files2 = directoryInfo.GetFiles("*").ToList();
+
+                try
                 {
-                    if (file.LastWriteTime < DateTime.Now.AddDays(retentionDays * -1))
-                        file.Delete();
+                    foreach (FileInfo file in Files2)
+                    {
+                        if (file.LastWriteTime < DateTime.Now.AddDays(retentionDays * -1))
+                            file.Delete();
+
+                    }
+                }
+                catch (Exception ex)
+                {
+                    HTTPUtils.Instance.writeToLog(this.customerGuid, "ERROR", inPath + " " + ex.ToString());
 
                 }
+                Thread.Sleep(6*60*60 * 1000);
             }
-            catch (Exception ex)
-            {
-                HTTPUtils.Instance.writeToLog(this.customerGuid, "ERROR", inPath + " " + ex.ToString());
-
-            }
-            
             return "";
         }
 

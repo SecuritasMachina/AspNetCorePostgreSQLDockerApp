@@ -11,6 +11,10 @@ namespace Common.DTO.V2
         public string msgType;
         public string msg;
         public string guid;
+        
+        public string? nameSpace;
+        public string? authKey;
+
         public enum msgTypes
         {
             dirListing,

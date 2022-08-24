@@ -45,7 +45,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             try
             {
                 string baseFilename = Path.GetFileName(restoreName);
-                HTTPUtils.Instance.writeToLog(customerGuid, "INFO", "Starting Restore for:" + baseFilename);
+                HTTPUtils.Instance.writeToLog(customerGuid, "RESTORE-START", "Starting Restore for:" + baseFilename);
                 FileDTO fileDTO = new FileDTO();
                 fileDTO.FileName = restoreName;
                 fileDTO.Status = "InProgress";
@@ -60,7 +60,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(azureBlobRestoreContainerName);
 
                 string restoreFileName = restoreName.Substring(0, restoreName.LastIndexOf("."));
-                var blockBlobClient = containerClient.GetBlobClient(restoreFileName);
+                var blockBlobClient = containerClient.GetBlobClient(baseFilename);
                 var outStream = await blockBlobClient.OpenWriteAsync(true);
                 
                    // passPhrase = envPassPhrase;
@@ -78,7 +78,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
 
                 HTTPUtils.Instance.putCache(customerGuid, fileDTO.FileName + "-" + genericMessage2.msgType + "-" + customerGuid, JsonConvert.SerializeObject(genericMessage2));
-                HTTPUtils.Instance.writeToLog(customerGuid, "INFO", "Restore Completed for "+ baseFilename);
+                HTTPUtils.Instance.writeToLog(customerGuid, "RESTORE-END", "Restore Completed for "+ baseFilename);
 
             }
             catch (Exception ex)

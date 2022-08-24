@@ -80,11 +80,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
             DirectoryInfo directoryInfo = new DirectoryInfo(mountedDir);
             FileInfo[] Files = directoryInfo.GetFiles("*"); //Getting Text files
 
-            Console.WriteLine("Showing directory listing for " + mountedDir);
-            foreach (FileInfo file in Files)
-            {
-                Console.WriteLine(file.Name);
-            }
+            Console.WriteLine(mountedDir + " has " + Files.Length + " files"); ;
+
             Console.Write("Testing writing to " + mountedDir);
             try
             {
@@ -168,14 +165,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 // start processing 
                 await processor.StartProcessingAsync();
-                //string oldGenericMessageJson = "";
-                var timer = new PeriodicTimer(TimeSpan.FromSeconds(60*60));
 
-                /*while (await timer.WaitForNextTickAsync())
-                {
-                    ArchiveWorker archiveWorker = new ArchiveWorker(RunTimeSettings.topicCustomerGuid, mountedDir, RetentionDays);
-                    archiveWorker.StartAsync();
-                }*/
+                   ArchiveWorker archiveWorker = new ArchiveWorker(RunTimeSettings.topicCustomerGuid, mountedDir, RetentionDays);
+                    //archiveWorker.StartAsync();
+
+
+               Task task = Task.Run(() => archiveWorker.StartAsync());
+
                 while (true)
                 {
                     HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "TRACE", $"Scanning azureBlobEndpoint length:{azureBlobEndpoint.Length} azureBlobContainerName:{azureBlobContainerName}");
@@ -235,7 +231,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 //await client.DisposeAsync();
             }
         }
-
+        private static void MyFunction()
+        {
+            // Loop in here
+        }
         public static void RunBackup(object s)
         {
             BackupWorker say = s as BackupWorker;

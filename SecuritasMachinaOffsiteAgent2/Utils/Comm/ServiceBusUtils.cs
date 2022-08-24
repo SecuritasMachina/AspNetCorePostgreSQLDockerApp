@@ -1,5 +1,7 @@
 ﻿using Azure.Messaging.ServiceBus;
+using Common.DTO.V2;
 using Common.Statics;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,18 +18,24 @@ namespace Common.Utils.Comm
 
         // the sender used to publish messages to the queue
         static ServiceBusSender? sender;
-        public static async Task postMsg2ControllerAsync(string myJson)
+        public static async Task postMsg2ControllerAsync(string? nameSpace, string? guid, string? messageType, string? json)
         {
             try
             {
                 if (client == null)
                     client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
                 if (sender == null)
-                    sender = client.CreateSender(RunTimeSettings.topicNamecustomerGuid);
+                    sender = client.CreateSender("coordinator");
+                GenericMessage genericMessage = new GenericMessage();
+                genericMessage.guid = guid;
+                genericMessage.nameSpace = nameSpace;
+                genericMessage.msgType = messageType;
+                genericMessage.msg = json;
+                genericMessage.authKey = RunTimeSettings.authKey;
                 ServiceBusMessageBatch messageBatch = await sender.CreateMessageBatchAsync();
-                messageBatch.TryAddMessage(new ServiceBusMessage(myJson));
+                messageBatch.TryAddMessage(new ServiceBusMessage(JsonConvert.SerializeObject(genericMessage)));
                 await sender.SendMessagesAsync(messageBatch);
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicNamecustomerGuid, "INFO", "Sent " + myJson.Length + " bytes to message handler");
+                //HTTPUtils.Instance.writeToLog(RunTimeSettings.topicNamecustomerGuid, "INFO", "Sent " + myJson.Length + " bytes to message handler");
                 //Console.WriteLine("Posting " + myJson);
             }
             catch (Exception ex)

@@ -89,7 +89,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage.guid = customerGuid;
 
                 //await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
-                HTTPUtils.Instance.writeToLog(this.customerGuid, "INFO", "Completed encryption, deleted : " + backupName);
+                HTTPUtils.Instance.writeToLog(this.customerGuid, "BACKUP-END", "Completed encryption, deleted : " + backupName);
                 HTTPUtils.Instance.writeBackupHistory(this.customerGuid, basebackupName,backupName, fi.Length, startTimeStamp);
                 string payload = HttpUtility.UrlEncode(backupName + "-backupComplete-" + this.customerGuid);
                 HTTPUtils.Instance.putCache(this.customerGuid, payload, JsonConvert.SerializeObject(genericMessage));

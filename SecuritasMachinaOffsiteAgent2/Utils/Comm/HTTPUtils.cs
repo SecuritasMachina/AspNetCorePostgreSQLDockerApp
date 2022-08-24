@@ -1,6 +1,7 @@
 ﻿using Common.DTO.V2;
 using Common.Statics;
 using Newtonsoft.Json;
+using SecuritasMachinaOffsiteAgent.DTO.V2;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -48,11 +49,11 @@ namespace Common.Utils.Comm
             response.EnsureSuccessStatusCode();
             string result = response.Content.ReadAsStringAsync().Result;
             dynamic stuff = JsonConvert.DeserializeObject(result);
-             
+
             RunTimeSettings.SBConnectionString = stuff.serviceBusEndPoint;
             RunTimeSettings.topicNamecustomerGuid = stuff.topicName;
             RunTimeSettings.topicCustomerGuid = pcustomerGuid;
-            RunTimeSettings.authKey=stuff.authKey;
+            RunTimeSettings.authKey = stuff.authKey;
             RunTimeSettings.controllerTopicName = stuff.controllerTopicName;
             RunTimeSettings.clientSubscriptionName = stuff.clientSubscriptionName;
 
@@ -61,7 +62,7 @@ namespace Common.Utils.Comm
 
         public void writeToLog(string? guid, string? messageType, string? json)
         {
-            if (json == null)
+            /*if (json == null)
                 json = "empty msg";
             string serializedJson = JsonConvert.SerializeObject(json);
             Console.WriteLine($"writeToLog: guid:{guid} messageType:{messageType} json:{json}");
@@ -91,15 +92,16 @@ namespace Common.Utils.Comm
             {
                 Console.Out.WriteLine("-----------------");
                 Console.Out.WriteLine(e.Message);
-                //HTTPUtils.instance.writeToLog(guid, "ERROR", e.ToString());
-            }
+                
+            }*/
+            ServiceBusUtils.postMsg2ControllerAsync("agent/logs", guid, messageType, json);
         }
         public void writeBackupHistory(string? guid, string? backupFile, string newFileName, long fileLength, long startTimeStamp)
         {
 
             //string serializedJson = JsonConvert.SerializeObject(json);
             //Debug.WriteLine($"writeToLog: guid:{guid} backupFile:{backupFile} json:{json}");
-            string url = RunTimeSettings.WebListenerURL + "api/v3/postBackupHistory/" + RunTimeSettings.topicCustomerGuid + "/" + Uri.EscapeUriString(backupFile) + "/" + Uri.EscapeUriString(newFileName) + "/" + fileLength + "/" + startTimeStamp;
+           /* string url = RunTimeSettings.WebListenerURL + "api/v3/postBackupHistory/" + RunTimeSettings.topicCustomerGuid + "/" + Uri.EscapeUriString(backupFile) + "/" + Uri.EscapeUriString(newFileName) + "/" + fileLength + "/" + startTimeStamp;
             try
             {
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
@@ -121,11 +123,19 @@ namespace Common.Utils.Comm
                 writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", e.ToString());
                 //HTTPUtils.instance.writeToLog(guid, "ERROR", e.ToString());
             }
+           */
+            BackupHistoryDTO backupHistoryDTO = new BackupHistoryDTO();
+            backupHistoryDTO.startTimeStamp = startTimeStamp;
+            backupHistoryDTO.backupFile = backupFile;
+            backupHistoryDTO.fileLength = fileLength;
+            backupHistoryDTO.newFileName=newFileName;
+            backupHistoryDTO.startTimeStamp=startTimeStamp;
+            ServiceBusUtils.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.topicCustomerGuid, "writeBackupHistory", JsonConvert.SerializeObject(backupHistoryDTO));
         }
         public void putCache(string topiccustomerGuid, string messageType, string json)
         {
             //Console.Out.WriteLine("putCache:" + " messageType:" + messageType + " json:" + json);
-            try
+            /*try
             {
                 string payload = Uri.EscapeUriString(messageType);
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "api/v3/putCache/" + payload);
@@ -156,6 +166,8 @@ namespace Common.Utils.Comm
                 Console.Out.WriteLine(e.Message);
                 writeToLog(topiccustomerGuid, "ERROR", e.ToString() + "Parameters: " + $"{topiccustomerGuid},  {messageType},  {json}");
             }
+            */
+            ServiceBusUtils.postMsg2ControllerAsync("agent/putCache", topiccustomerGuid, messageType, json);
         }
 
         public void sendAgentDir(string topiccustomerGuid, DirListingDTO dirListingDTO1)
@@ -168,6 +180,7 @@ namespace Common.Utils.Comm
                 response.EnsureSuccessStatusCode();
                 string result = response.Content.ReadAsStringAsync().Result;
                 dynamic stuff = JsonConvert.DeserializeObject(result);
+                ServiceBusUtils.postMsg2ControllerAsync("agent/dir", topiccustomerGuid, "dirlist", stringContent.ToString());
             }
             catch (Exception ignore) { }
             // RunTimeSettings.passPhrase = stuff.passPhrase;
