@@ -22,10 +22,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
         private string passPhrase;
         //private BackgroundWorker worker;
         private int loopCount = 0;
-
+        public override string ToString()
+        {
+            return this.backupName;
+        }
         public BackupWorker(string customerGuid, string azureBlobEndpoint, string BlobContainerName, string backupName, string passPhrase)
         {
-            Console.WriteLine("Starting BackupWorker for " + backupName);
+            
             this.customerGuid = customerGuid;
             this.azureBlobEndpoint = azureBlobEndpoint;
             this.BlobContainerName = BlobContainerName;
@@ -37,6 +40,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         public async Task<object> StartAsync()
         {
+            Console.WriteLine("Starting BackupWorker for " + backupName);
             //string genericMessageJson;
             // Create a BlobServiceClient object which will be used to create a container client
             GenericMessage genericMessage = new GenericMessage();
@@ -57,7 +61,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 string basebackupName = backupName;
                 while (true)
                 {
-                    if (generationCount > 100)
+                    if (generationCount > 9999)
                     {
                         break;
                     }
@@ -91,10 +95,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 //await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
                 HTTPUtils.Instance.writeToLog(this.customerGuid, "BACKUP-END", "Completed encryption, deleted : " + backupName);
                 HTTPUtils.Instance.writeBackupHistory(this.customerGuid, basebackupName,backupName, fi.Length, startTimeStamp);
-                string payload = HttpUtility.UrlEncode(backupName + "-backupComplete-" + this.customerGuid);
-                HTTPUtils.Instance.putCache(this.customerGuid, payload, JsonConvert.SerializeObject(genericMessage));
-                Console.WriteLine("Completed encryption, deleted : " + backupName + "payload:" + payload);
-
+                string messageType = HttpUtility.UrlEncode(backupName + "-backupComplete-" + this.customerGuid);
+                ServiceBusUtils.postMsg2ControllerAsync("agent/putCache", this.customerGuid, messageType, JsonConvert.SerializeObject(genericMessage));
+               // HTTPUtils.Instance.putCache(this.customerGuid, payload, JsonConvert.SerializeObject(genericMessage));
+                Console.WriteLine("Completed encryption, deleted : " + backupName + "payload:" + messageType);
+                ThreadUtils.deleteFromQueue(basebackupName);
             }
             catch (Exception ex)
             {

@@ -32,6 +32,7 @@ namespace Common.Utils.Comm
                 genericMessage.msgType = messageType;
                 genericMessage.msg = json;
                 genericMessage.authKey = RunTimeSettings.authKey;
+                Console.WriteLine(messageType+" "+ json);
                 ServiceBusMessageBatch messageBatch = await sender.CreateMessageBatchAsync();
                 messageBatch.TryAddMessage(new ServiceBusMessage(JsonConvert.SerializeObject(genericMessage)));
                 await sender.SendMessagesAsync(messageBatch);

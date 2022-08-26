@@ -1,6 +1,7 @@
 ﻿using Common.DTO.V2;
 using Common.Statics;
 using Newtonsoft.Json;
+using SecuritasMachinaOffsiteAgent.BO;
 using SecuritasMachinaOffsiteAgent.DTO.V2;
 using System;
 using System.Collections.Generic;
@@ -175,13 +176,15 @@ namespace Common.Utils.Comm
             try
             {
                 var stringContent = new StringContent(JsonConvert.SerializeObject(dirListingDTO1), Encoding.UTF8, "application/json");
+                
                 /*_client.DefaultRequestHeaders.Add("AuthKey", RunTimeSettings.authKey);
                 HttpResponseMessage response = _client.PutAsync("/api/v3/agentDir/" + topiccustomerGuid, stringContent).Result;
                 response.EnsureSuccessStatusCode();
                 string result = response.Content.ReadAsStringAsync().Result;
                 dynamic stuff = JsonConvert.DeserializeObject(result);
                 */
-                writeToLog(topiccustomerGuid, "DIRLIST", "");
+                writeToLog(topiccustomerGuid, "DIRLIST", stringContent.ToString());
+                
                 ServiceBusUtils.postMsg2ControllerAsync("agent/dir", topiccustomerGuid, "dirlist", stringContent.ToString());
             }
             catch (Exception ignore) { }

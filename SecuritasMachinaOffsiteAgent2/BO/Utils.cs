@@ -1,24 +1,25 @@
 ﻿using Common.DTO.V2;
 using Common.Utils.Comm;
 using Newtonsoft.Json;
+using SecuritasMachinaOffsiteAgent.DTO.V2;
 using System;
 using System.Diagnostics;
 using System.IO;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
     public class Utils
     {
-        
-        public static void doDirListing(string topiccustomerGuid,string pMountedDir)
+
+        public static DirListingDTO doDirListing(string topiccustomerGuid, string pMountedDir)
         {
             DirectoryInfo directoryInfo = new DirectoryInfo(pMountedDir);
             List<FileInfo> Files2 = directoryInfo.GetFiles("*")
                                                               .OrderByDescending(f => f.LastWriteTime)
                                                               .ToList();
-            ; //Getting Text files
-            //string[] fileArray = Directory.GetFiles(pMountedDir);
+            
             DirListingDTO dirListingDTO = new DirListingDTO();
 
             foreach (FileInfo file in Files2)
@@ -26,7 +27,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 FileDTO fDTO = new FileDTO();
                 fDTO.FileName = file.Name;
                 fDTO.length = file.Length;
-                long unixTimeMilliseconds = new DateTimeOffset(file.CreationTime).ToUnixTimeMilliseconds();
+                long unixTimeMilliseconds = new DateTimeOffset(file.LastWriteTime).ToUnixTimeMilliseconds();
                 fDTO.FileDate = unixTimeMilliseconds;
                 dirListingDTO.fileDTOs.Add(fDTO);
 
@@ -37,11 +38,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
             genericMessage.msgType = msgType.ToString();
             genericMessage.msg = myJson;
             genericMessage.guid = topiccustomerGuid;
-            string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
+            //string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
             //TODO Don't send if same
-           
-                HTTPUtils.Instance.putCache(topiccustomerGuid,genericMessage.msgType + "-" + topiccustomerGuid, genericMessageJson);
-                //oldGenericMessageJson = genericMessageJson;
+
+            //
+            return dirListingDTO;
             
         }
         public static byte[] GenerateRandomSalt()
@@ -121,7 +122,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 fsCrypt.Close();
             }
         }
-        public void AES_DecryptStream(string topiccustomerGuid,Stream fsCrypt, Stream fsOut, string pInfileName, string password)
+        public void AES_DecryptStream(string topiccustomerGuid, Stream fsCrypt, Stream fsOut, string pInfileName, string password)
         {
             //todo:
             // - create error message on wrong password
@@ -171,7 +172,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             catch (Exception ex)
             {
                 HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", $"...Error AES Decypt {ex.Message.ToString()}");
-                
+
             }
 
             try
@@ -188,6 +189,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 fsCrypt.Close();
             }
         }
-       
+
     }
 }

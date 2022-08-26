@@ -20,6 +20,7 @@ using Azure.Storage.Blobs.Models;
 using Common.Statics;
 using Common.Utils.Comm;
 using Common.DTO.V2;
+using SecuritasMachinaOffsiteAgent.DTO.V2;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
@@ -167,21 +168,20 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 await processor.StartProcessingAsync();
 
                 ArchiveWorker archiveWorker = new ArchiveWorker(RunTimeSettings.topicCustomerGuid, mountedDir, RetentionDays);
-                //archiveWorker.StartAsync();
-
 
                 Task task = Task.Run(() => archiveWorker.StartAsync());
 
+                DailyUpdateWorker dailyUpdateWorker = new DailyUpdateWorker(RunTimeSettings.topicCustomerGuid, mountedDir, RetentionDays);
+
+                Task dailyTask = Task.Run(() => dailyUpdateWorker.StartAsync());
+                
                 while (true)
                 {
                     HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "TRACE", $"Scanning azureBlobEndpoint length:{azureBlobEndpoint.Length} azureBlobContainerName:{azureBlobContainerName}");
 
                     try
                     {
-                        // Send dir listing to master
-                        Utils.doDirListing(RunTimeSettings.topicCustomerGuid, mountedDir);
-
-
+                        DirListingDTO agentDirList = Utils.doDirListing(RunTimeSettings.topicCustomerGuid, mountedDir);
                         Console.WriteLine("Scanning " + azureBlobEndpoint + " " + azureBlobContainerName);
                         DirListingDTO dirListingDTO1 = new DirListingDTO();
                         await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
@@ -193,25 +193,24 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                             dirListingDTO1.fileDTOs.Add(fileDTO);
                         }
-                        HTTPUtils.Instance.sendAgentDir(RunTimeSettings.topicCustomerGuid, dirListingDTO1);
-                        ThreadPool.SetMaxThreads(3, 6);
-                        using (var countdownEvent = new CountdownEvent(dirListingDTO1.fileDTOs.Count))
-                        {
-                            foreach (FileDTO fileDTO in dirListingDTO1.fileDTOs)
-                            {
-                                Console.WriteLine("\t" + fileDTO.FileName);
-                                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Started {fileDTO.FileName}");
+                        //HTTPUtils.Instance.sendAgentDir(RunTimeSettings.topicCustomerGuid, dirListingDTO1);
 
-                                // spawn workers for files
-                                BackupWorker backupWorker = new BackupWorker(RunTimeSettings.topicCustomerGuid, azureBlobEndpoint, azureBlobContainerName, fileDTO.FileName, envPassPhrase);
-                                ThreadPool.QueueUserWorkItem(x =>
-                                {
-                                    backupWorker.StartAsync();
-                                    countdownEvent.Signal();
-                                });
-                            }
-                            countdownEvent.Wait();
+                        StatusDTO statusDTO = new StatusDTO();
+                        statusDTO.activeThreads = ThreadUtils.getActiveThreads();
+                        statusDTO.AgentFileDTOs = agentDirList.fileDTOs;
+                        statusDTO.StagingFileDTOs = dirListingDTO1.fileDTOs;
+
+                        ServiceBusUtils.postMsg2ControllerAsync("agent/status", RunTimeSettings.topicCustomerGuid, "status", JsonConvert.SerializeObject(statusDTO));
+
+                        foreach (FileDTO fileDTO in dirListingDTO1.fileDTOs)
+                        {
+
+                            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Checking {fileDTO.FileName}");
+                            // spawn workers for files
+                            BackupWorker backupWorker = new BackupWorker(RunTimeSettings.topicCustomerGuid, azureBlobEndpoint, azureBlobContainerName, fileDTO.FileName, envPassPhrase);
+                            ThreadUtils.addToQueue(backupWorker);
                         }
+
                         Thread.Sleep(60 * 1000);
                     }
                     catch (Exception ex)

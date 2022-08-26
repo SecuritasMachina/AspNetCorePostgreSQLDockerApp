@@ -8,8 +8,8 @@ namespace Common.DTO.V2
 {
     public class FileDTO
     {
-        public long? length;
-        public long? FileDate;
+        public long? length { get; set; }
+        public long? FileDate { get; set; }
 
         public string FileName { get; set; }
         public string Path { get; set; }
