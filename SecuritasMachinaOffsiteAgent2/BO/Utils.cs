@@ -10,8 +10,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 {
     public class Utils
     {
-        static string oldGenericMessageJson;
-        static int tLoopCount = 0;
+        
         public static void doDirListing(string topiccustomerGuid,string pMountedDir)
         {
             DirectoryInfo directoryInfo = new DirectoryInfo(pMountedDir);
@@ -40,21 +39,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
             genericMessage.guid = topiccustomerGuid;
             string genericMessageJson = JsonConvert.SerializeObject(genericMessage);
             //TODO Don't send if same
-            if (oldGenericMessageJson==null || !oldGenericMessageJson.Equals(genericMessageJson))
-            {
-               
+           
                 HTTPUtils.Instance.putCache(topiccustomerGuid,genericMessage.msgType + "-" + topiccustomerGuid, genericMessageJson);
-                oldGenericMessageJson = genericMessageJson;
-            }
-            else//Refresh every 10 minutes, TODO refresh on demand via message listener
-            {
-                if (tLoopCount < 50)
-                {
-                    oldGenericMessageJson = "RESET";
-                    tLoopCount = 0;
-                }
-                tLoopCount++;
-            }
+                //oldGenericMessageJson = genericMessageJson;
+            
         }
         public static byte[] GenerateRandomSalt()
         {

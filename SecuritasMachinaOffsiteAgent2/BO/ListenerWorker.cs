@@ -26,7 +26,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
     internal class ListenerWorker
     {
 
-        
+
         static string? azureBlobEndpoint = Environment.GetEnvironmentVariable("azureBlobEndpoint");
         static string? envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
         static string? azureBlobContainerName = Environment.GetEnvironmentVariable("azureBlobContainerName");
@@ -68,7 +68,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
                 Console.WriteLine("!!! Unable to retrieve configuration !!!");
             }
-            
+
             // Create the client object that will be used to create sender and receiver objects
             client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
 
@@ -156,7 +156,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 processor = client.CreateProcessor(RunTimeSettings.topicCustomerGuid, RunTimeSettings.clientSubscriptionName, new ServiceBusProcessorOptions());
                 HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Listening on {RunTimeSettings.topicCustomerGuid}");
-               // Console.WriteLine("Listening");
+                // Console.WriteLine("Listening");
                 // add handler to process messages
                 processor.ProcessMessageAsync += MessageHandler;
 
@@ -166,11 +166,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 // start processing 
                 await processor.StartProcessingAsync();
 
-                   ArchiveWorker archiveWorker = new ArchiveWorker(RunTimeSettings.topicCustomerGuid, mountedDir, RetentionDays);
-                    //archiveWorker.StartAsync();
+                ArchiveWorker archiveWorker = new ArchiveWorker(RunTimeSettings.topicCustomerGuid, mountedDir, RetentionDays);
+                //archiveWorker.StartAsync();
 
 
-               Task task = Task.Run(() => archiveWorker.StartAsync());
+                Task task = Task.Run(() => archiveWorker.StartAsync());
 
                 while (true)
                 {
@@ -180,8 +180,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     {
                         // Send dir listing to master
                         Utils.doDirListing(RunTimeSettings.topicCustomerGuid, mountedDir);
-                        
-                        
+
+
                         Console.WriteLine("Scanning " + azureBlobEndpoint + " " + azureBlobContainerName);
                         DirListingDTO dirListingDTO1 = new DirListingDTO();
                         await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
@@ -252,20 +252,20 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 string msgType = genericMessage.msgType;
 
                 dynamic msgObj = JsonConvert.DeserializeObject(genericMessage.msg);
-                
+
                 string passPhrase = "";
 
 
-                
+
                 //Console.WriteLine($"Received: {body}");
                 if (msgType == "restoreFile")
                 {
                     //Console.WriteLine("Starting Restore for:" + backupName);
                     string backupName = msgObj.backupName;
                     string inFileName = mountedDir + backupName;
-                    RestoreWorker backupWorker = new RestoreWorker(RunTimeSettings.topicCustomerGuid, azureBlobRestoreContainerName,azureBlobEndpoint, azureBlobContainerName, inFileName, envPassPhrase);
+                    RestoreWorker backupWorker = new RestoreWorker(RunTimeSettings.topicCustomerGuid, azureBlobRestoreContainerName, azureBlobEndpoint, azureBlobContainerName, inFileName, envPassPhrase);
                     backupWorker.StartAsync();
-                    
+
                 }
                 else if (msgType == "DirList")
                 {
