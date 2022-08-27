@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -21,6 +22,7 @@ using Common.Statics;
 using Common.Utils.Comm;
 using Common.DTO.V2;
 using SecuritasMachinaOffsiteAgent.DTO.V2;
+
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
@@ -53,6 +55,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 RetentionDays = Int32.Parse(Environment.GetEnvironmentVariable("RetentionDays"));
             }
             catch (Exception ignore) { }
+            if (azureBlobRestoreContainerName == null)
+                azureBlobRestoreContainerName = "restored";
             RunTimeSettings.topicCustomerGuid = Environment.GetEnvironmentVariable("customerGuid");
             Console.WriteLine("Starting ListenerWorker azureBlobEndpoint:" + azureBlobEndpoint);
             Console.WriteLine("azureBlobContainerName:" + azureBlobContainerName);
@@ -127,19 +131,17 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 Console.WriteLine("...Error deleting at " + mountedDir + " - Ensure VM instance has FULL access to Google cloud storage");
             }
             //TODO test dir listing of blob container
-            BlobServiceClient blobServiceClient;
-            BlobContainerClient containerClient = null;
+            BlobServiceClient? blobServiceClient = null;
+            BlobContainerClient stagingContainerClient = null;
             try
             {
                 Console.Write("Testing Azure Blob Endpoint at " + azureBlobEndpoint + " " + azureBlobContainerName);
                 blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
-                containerClient = blobServiceClient.GetBlobContainerClient(azureBlobContainerName);
+                stagingContainerClient = blobServiceClient.GetBlobContainerClient(azureBlobContainerName);
 
-                await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
+                await foreach (BlobItem blobItem in stagingContainerClient.GetBlobsAsync())
                 {
-                    //Console.WriteLine("\t" + blobItem.Name);
-
-
+ 
                 }
                 Console.WriteLine("Success");
             }
@@ -183,26 +185,29 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     {
                         DirListingDTO agentDirList = Utils.doDirListing(RunTimeSettings.topicCustomerGuid, mountedDir);
                         Console.WriteLine("Scanning " + azureBlobEndpoint + " " + azureBlobContainerName);
-                        DirListingDTO dirListingDTO1 = new DirListingDTO();
-                        await foreach (BlobItem blobItem in containerClient.GetBlobsAsync())
-                        {
-                            FileDTO fileDTO = new FileDTO();
-                            fileDTO.FileName = blobItem.Name;
-                            fileDTO.length = blobItem.Properties.ContentLength;
-                            fileDTO.FileDate = blobItem.Properties.LastModified.Value.ToUnixTimeMilliseconds();
+                        DirListingDTO stagingContainerDirListingDTO1 = await Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync());
 
-                            dirListingDTO1.fileDTOs.Add(fileDTO);
-                        }
-                        //HTTPUtils.Instance.sendAgentDir(RunTimeSettings.topicCustomerGuid, dirListingDTO1);
+                        BlobContainerClient restoredContainerName = blobServiceClient.GetBlobContainerClient(azureBlobRestoreContainerName);
+
+                        DirListingDTO restoredListingDTO = await Utils.doDirListingAsync(restoredContainerName.GetBlobsAsync());
 
                         StatusDTO statusDTO = new StatusDTO();
-                        statusDTO.activeThreads = ThreadUtils.getActiveThreads();
+                       
+                        statusDTO.activeThreads = (long)Process.GetCurrentProcess().Threads.Count; 
+                        statusDTO.UserProcessorTime = Process.GetCurrentProcess().UserProcessorTime.Ticks;
+                        statusDTO.TotalProcessorTime = Process.GetCurrentProcess().TotalProcessorTime.Ticks;
+                        statusDTO.WorkingSet64 = Process.GetCurrentProcess().WorkingSet64;
+                        statusDTO.TotalMemory=System.GC.GetTotalMemory(false);
+                        PerformanceCounter ramCounter = new PerformanceCounter("Memory", "Available Bytes");
+                        statusDTO.TotalMemory = (long)ramCounter.NextValue() ;
                         statusDTO.AgentFileDTOs = agentDirList.fileDTOs;
-                        statusDTO.StagingFileDTOs = dirListingDTO1.fileDTOs;
+                        statusDTO.StagingFileDTOs = stagingContainerDirListingDTO1.fileDTOs;
+                        statusDTO.RestoredListingDTO = restoredListingDTO.fileDTOs;
+
 
                         ServiceBusUtils.postMsg2ControllerAsync("agent/status", RunTimeSettings.topicCustomerGuid, "status", JsonConvert.SerializeObject(statusDTO));
 
-                        foreach (FileDTO fileDTO in dirListingDTO1.fileDTOs)
+                        foreach (FileDTO fileDTO in stagingContainerDirListingDTO1.fileDTOs)
                         {
 
                             HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Checking {fileDTO.FileName}");
@@ -260,8 +265,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 if (msgType == "restoreFile")
                 {
                     //Console.WriteLine("Starting Restore for:" + backupName);
-                    string backupName = msgObj.backupName;
-                    string inFileName = mountedDir + backupName;
+                   // string backupName = ;
+                    string inFileName = mountedDir + msgObj.backupName;
                     RestoreWorker backupWorker = new RestoreWorker(RunTimeSettings.topicCustomerGuid, azureBlobRestoreContainerName, azureBlobEndpoint, azureBlobContainerName, inFileName, envPassPhrase);
                     backupWorker.StartAsync();
 

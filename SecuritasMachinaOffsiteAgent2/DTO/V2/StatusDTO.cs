@@ -11,6 +11,15 @@ namespace SecuritasMachinaOffsiteAgent.DTO.V2
     {
         public long activeThreads { get; set; }
         public List<FileDTO> AgentFileDTOs = new List<FileDTO>();
-        internal List<FileDTO> StagingFileDTOs = new List<FileDTO>();
+        public List<FileDTO> StagingFileDTOs = new List<FileDTO>();
+        public  List<FileDTO> RestoredListingDTO = new List<FileDTO>();
+
+        public long TotalMemory { get; set; }
+
+        public long WorkingSet64 { get; set; }
+
+        public long TotalProcessorTime { get; set; }
+
+        public long  UserProcessorTime { get; set; }
     }
 }

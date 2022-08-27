@@ -17,19 +17,20 @@ namespace SecuritasMachinaOffsiteAgent.BO
     {
         private string customerGuid;
         private string azureBlobEndpoint;
-        private string BlobContainerName;
+
         private string restoreName;
         private string passPhrase;
         private string azureBlobRestoreContainerName;
         //private BackgroundWorker worker;
         //private int loopCount = 0;
 
-        public RestoreWorker(string customerGuid,string azureBlobRestoreContainerName, string azureBlobEndpoint, string BlobContainerName, string restoreName, string passPhrase)
+        public RestoreWorker(string customerGuid,string azureBlobRestoreContainerName, string azureBlobEndpoint, string BlobContainerName,string restoreName, string passPhrase)
         {
             Console.WriteLine("Starting RestoreWorker for " + restoreName);
             this.customerGuid = customerGuid;
             this.azureBlobEndpoint = azureBlobEndpoint;
-            this.BlobContainerName = BlobContainerName;
+            //this.BlobContainerName = BlobContainerName;
+           
             this.restoreName = restoreName;
             this.passPhrase = passPhrase;
             this.azureBlobRestoreContainerName = azureBlobRestoreContainerName;
@@ -45,6 +46,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             try
             {
                 string baseFilename = Path.GetFileName(restoreName);
+                //string baseFilename = Path.GetFileName(restoreName);
                 HTTPUtils.Instance.writeToLog(customerGuid, "RESTORE-START", "Starting Restore for:" + baseFilename);
                 FileDTO fileDTO = new FileDTO();
                 fileDTO.FileName = restoreName;
@@ -55,12 +57,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 FileStream inStream = new FileStream(restoreName, FileMode.Open);
                 BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
-                if (azureBlobRestoreContainerName == null)
-                    azureBlobRestoreContainerName = "restored";
+               
                 BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(azureBlobRestoreContainerName);
 
                 string restoreFileName = restoreName.Substring(0, restoreName.LastIndexOf("."));
-                var blockBlobClient = containerClient.GetBlobClient(baseFilename);
+                var blockBlobClient = containerClient.GetBlobClient(baseFilename.Replace(".enc", ""));
                 var outStream = await blockBlobClient.OpenWriteAsync(true);
                 
                    // passPhrase = envPassPhrase;

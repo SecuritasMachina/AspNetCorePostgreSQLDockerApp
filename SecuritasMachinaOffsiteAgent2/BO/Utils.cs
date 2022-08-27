@@ -1,4 +1,6 @@
-﻿using Common.DTO.V2;
+﻿using Azure;
+using Azure.Storage.Blobs.Models;
+using Common.DTO.V2;
 using Common.Utils.Comm;
 using Newtonsoft.Json;
 using SecuritasMachinaOffsiteAgent.DTO.V2;
@@ -19,8 +21,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
             List<FileInfo> Files2 = directoryInfo.GetFiles("*")
                                                               .OrderByDescending(f => f.LastWriteTime)
                                                               .ToList();
-            
-            DirListingDTO dirListingDTO = new DirListingDTO();
+
+            DirListingDTO ret = new DirListingDTO();
 
             foreach (FileInfo file in Files2)
             {
@@ -29,10 +31,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 fDTO.length = file.Length;
                 long unixTimeMilliseconds = new DateTimeOffset(file.LastWriteTime).ToUnixTimeMilliseconds();
                 fDTO.FileDate = unixTimeMilliseconds;
-                dirListingDTO.fileDTOs.Add(fDTO);
+                ret.fileDTOs.Add(fDTO);
 
             }
-            string myJson = JsonConvert.SerializeObject(dirListingDTO);
+            string myJson = JsonConvert.SerializeObject(ret);
             GenericMessage genericMessage = new GenericMessage();
             GenericMessage.msgTypes msgType = GenericMessage.msgTypes.dirListing;
             genericMessage.msgType = msgType.ToString();
@@ -42,8 +44,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
             //TODO Don't send if same
 
             //
-            return dirListingDTO;
-            
+            return ret;
+
         }
         public static byte[] GenerateRandomSalt()
         {
@@ -190,5 +192,19 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
         }
 
+        internal static async Task<DirListingDTO> doDirListingAsync(AsyncPageable<BlobItem> asyncPageable)
+        {
+            DirListingDTO ret = new DirListingDTO();
+            await foreach (BlobItem blobItem in asyncPageable)
+            {
+                FileDTO fileDTO = new FileDTO();
+                fileDTO.FileName = blobItem.Name;
+                fileDTO.length = blobItem.Properties.ContentLength;
+                fileDTO.FileDate = blobItem.Properties.LastModified.Value.ToUnixTimeMilliseconds();
+
+                ret.fileDTOs.Add(fileDTO);
+            }
+            return ret;
+        }
     }
 }
