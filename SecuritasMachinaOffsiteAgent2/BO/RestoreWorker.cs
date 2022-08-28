@@ -65,7 +65,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 var outStream = await blockBlobClient.OpenWriteAsync(true);
                 
                    // passPhrase = envPassPhrase;
-                new Utils().AES_DecryptStream(customerGuid, inStream, outStream, new FileInfo(restoreName).Length, restoreName, passPhrase);
+                new Utils().AES_DecryptStream(customerGuid, inStream, outStream, new FileInfo(restoreName).Length, baseFilename, passPhrase);
                 //FileDTO fileDTO = new FileDTO();
                 fileDTO.FileName = baseFilename;
                 fileDTO.Status = "Success";

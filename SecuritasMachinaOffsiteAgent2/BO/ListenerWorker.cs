@@ -216,7 +216,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                             ThreadUtils.addToQueue(backupWorker);
                         }
 
-                        Thread.Sleep(60 * 1000);
+                        Thread.Sleep(60 * 1000 * RunTimeSettings.PollBaseTime);
                     }
                     catch (Exception ex)
                     {

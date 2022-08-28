@@ -1,4 +1,5 @@
 ﻿
+using Common.Statics;
 using Common.Utils.Comm;
 using System.Web;
 
@@ -42,9 +43,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     HTTPUtils.Instance.writeToLog(this.customerGuid, "ERROR", inPath + " " + ex.ToString());
 
                 }
-                Thread.Sleep(6*60*60 * 1000);
+                Thread.Sleep(6*60*60 * 1000* RunTimeSettings.PollBaseTime);
             }
-            return "";
+          
         }
 
 

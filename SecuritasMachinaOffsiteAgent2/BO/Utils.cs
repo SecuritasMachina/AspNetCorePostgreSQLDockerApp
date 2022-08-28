@@ -140,7 +140,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("Error: " + ex.Message);
+
+               
+                HTTPUtils.Instance.writeToLog(pCustomerGuid, "ERROR", pBaseFileName + " " + ex.ToString());
+                throw (ex);
             }
             finally
             {
@@ -217,12 +220,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
             catch (CryptographicException ex_CryptographicException)
             {
                 Debug.WriteLine("CryptographicException error: " + ex_CryptographicException.Message);
-                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", $"...Error AES Decypt {ex_CryptographicException.Message.ToString()}, check passphrase");
+                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", $"...Error on {pInfileName} AES Decypt {ex_CryptographicException.Message.ToString()}, check passphrase");
+                throw (ex_CryptographicException);
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", $"...Error AES Decypt {ex.Message.ToString()}");
-
+                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", $"...Error on {pInfileName} AES Decypt {ex.Message.ToString()}");
+                throw (ex);
             }
 
             try

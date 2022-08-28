@@ -45,20 +45,29 @@ namespace Common.Utils.Comm
         }
         public void populateRuntime(string pcustomerGuid)
         {
+            long loopCount = 0;
+            while (loopCount < 100)
+            {
+                loopCount++;
+                try
+                {
+                    HttpResponseMessage response = _client.GetAsync("api/v2/config/" + pcustomerGuid).Result;
+                    response.EnsureSuccessStatusCode();
+                    string result = response.Content.ReadAsStringAsync().Result;
+                    dynamic stuff = JsonConvert.DeserializeObject(result);
 
-            HttpResponseMessage response = _client.GetAsync("api/v2/config/" + pcustomerGuid).Result;
-            response.EnsureSuccessStatusCode();
-            string result = response.Content.ReadAsStringAsync().Result;
-            dynamic stuff = JsonConvert.DeserializeObject(result);
-
-            RunTimeSettings.SBConnectionString = stuff.serviceBusEndPoint;
-            RunTimeSettings.topicNamecustomerGuid = stuff.topicName;
-            RunTimeSettings.topicCustomerGuid = pcustomerGuid;
-            RunTimeSettings.authKey = stuff.authKey;
-            RunTimeSettings.controllerTopicName = stuff.controllerTopicName;
-            RunTimeSettings.clientSubscriptionName = stuff.clientSubscriptionName;
-
-
+                    RunTimeSettings.SBConnectionString = stuff.serviceBusEndPoint;
+                    RunTimeSettings.topicNamecustomerGuid = stuff.topicName;
+                    //RunTimeSettings.topicCustomerGuid = pcustomerGuid;
+                    RunTimeSettings.authKey = stuff.authKey;
+                    RunTimeSettings.PollBaseTime = stuff.PollBaseTime == null ? (int)1 : (int)stuff.PollBaseTime;
+                    RunTimeSettings.clientSubscriptionName = stuff.clientSubscriptionName;
+                    break;
+                }
+                catch (Exception ex) {
+                    Console.Out.WriteLine($"Error connecting to Node, retrying..:" );
+                    Thread.Sleep(5 * 1000); }
+            }
         }
 
         public void writeToLog(string? guid, string? messageType, string? json)
