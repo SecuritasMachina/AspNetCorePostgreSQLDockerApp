@@ -54,7 +54,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 //fileDTO.length = outStream.Length;
                 string myJson = JsonConvert.SerializeObject(fileDTO);
                 GenericMessage genericMessage2 = new GenericMessage();
-
+                
                 FileStream inStream = new FileStream(restoreName, FileMode.Open);
                 BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
                
@@ -65,7 +65,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 var outStream = await blockBlobClient.OpenWriteAsync(true);
                 
                    // passPhrase = envPassPhrase;
-                new Utils().AES_DecryptStream(customerGuid, inStream, outStream, restoreName, passPhrase);
+                new Utils().AES_DecryptStream(customerGuid, inStream, outStream, new FileInfo(restoreName).Length, restoreName, passPhrase);
                 //FileDTO fileDTO = new FileDTO();
                 fileDTO.FileName = baseFilename;
                 fileDTO.Status = "Success";

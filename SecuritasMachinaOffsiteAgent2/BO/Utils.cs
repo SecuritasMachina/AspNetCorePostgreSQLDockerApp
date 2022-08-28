@@ -63,7 +63,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             return data;
         }
-        public void AES_EncryptStream(Stream fsIn, string outputFileName, string password)
+        public void AES_EncryptStream(string pCustomerGuid, Stream fsIn, string outputFileName, long pContentLength, string pBaseFileName, string password)
         {
             //http://stackoverflow.com/questions/27645527/aes-encryption-on-large-files
 
@@ -101,13 +101,37 @@ namespace SecuritasMachinaOffsiteAgent.BO
             //create a buffer (1mb) so only this amount will allocate in the memory and not the whole file
             byte[] buffer = new byte[1048576];
             int read;
-
+            long lengthRead = 0;
+            bool wrote25 = false;
+            bool wrote50 = false;
+            bool wrote75 = false;
             try
             {
                 while ((read = fsIn.Read(buffer, 0, buffer.Length)) > 0)
                 {
                     //   Application.DoEvents(); // -> for responsive GUI, using Task will be better!
                     cs.Write(buffer, 0, read);
+                    lengthRead += read;
+                   // double pctComplete = ((double)lengthRead / (double)pContentLength);
+                    int percentComplete = (int)Math.Round((double)(100 * lengthRead) / (double)pContentLength);
+                    if (pContentLength > 1024 * 1024 * 10)
+                    {
+                        if (percentComplete > 25 && !wrote25)
+                        {
+                            HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pBaseFileName} is {percentComplete}% complete");
+                            wrote25 = true;
+                        }
+                        if (percentComplete > 50 && !wrote50)
+                        {
+                            HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pBaseFileName} is {percentComplete}% complete");
+                            wrote50 = true;
+                        }
+                        if (percentComplete > 75 && !wrote75)
+                        {
+                            HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pBaseFileName} is {percentComplete}% complete");
+                            wrote75 = true;
+                        }
+                    }
                 }
 
                 //close up
@@ -124,7 +148,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 fsCrypt.Close();
             }
         }
-        public void AES_DecryptStream(string topiccustomerGuid, Stream fsCrypt, Stream fsOut, string pInfileName, string password)
+        public void AES_DecryptStream(string topiccustomerGuid, Stream fsCrypt, Stream fsOut, long pContentLength, string pInfileName, string password)
         {
             //todo:
             // - create error message on wrong password
@@ -154,7 +178,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             int read;
             byte[] buffer = new byte[1048576];
-
+            long lengthRead = 0;
+            bool wrote25 = false;
+            bool wrote50 = false;
+            bool wrote75 = false;
             try
             {
                 long tGB = 0;
@@ -163,6 +190,27 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     //Application.DoEvents();
                     tGB++;
                     fsOut.Write(buffer, 0, read);
+                    lengthRead += read;
+
+                    int percentComplete = (int)Math.Round((double)(100 * lengthRead) / (double)pContentLength);
+                    if (pContentLength > 1024 * 1024 * 10)
+                    {
+                        if (percentComplete > 25 && !wrote25)
+                        {
+                            HTTPUtils.Instance.writeToLog(topiccustomerGuid, "RESTORE-UPDATE", $"Restoring {pInfileName} is {percentComplete}% complete");
+                            wrote25 = true;
+                        }
+                        if (percentComplete > 50 && !wrote50)
+                        {
+                            HTTPUtils.Instance.writeToLog(topiccustomerGuid, "RESTORE-UPDATE", $"Restoring {pInfileName} is {percentComplete}% complete");
+                            wrote50 = true;
+                        }
+                        if (percentComplete > 75 && !wrote75)
+                        {
+                            HTTPUtils.Instance.writeToLog(topiccustomerGuid, "RESTORE-UPDATE", $"Restoring {pInfileName} is {percentComplete}% complete");
+                            wrote75 = true;
+                        }
+                    }
                     //HTTPUtils.Instance.writeToLog(topiccustomerGuid, "TRACE", $"...Decypted {tGB} GB of {pInfileName}");
                 }
             }

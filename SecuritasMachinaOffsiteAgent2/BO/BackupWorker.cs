@@ -10,6 +10,7 @@ using System.Text;
 
 using Common.Utils.Comm;
 using System.Web;
+using Azure.Storage.Blobs.Models;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
@@ -53,8 +54,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
                 BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
                 BlobClient blobClient = containerClient.GetBlobClient(backupName);
-                Stream inStream = blobClient.OpenRead();
+                BlobProperties properties = await blobClient.GetPropertiesAsync();
 
+                Stream inStream = blobClient.OpenRead();
+                
                 //Store directly on fusepath
                 string outFileName = "/mnt/offsite/" + backupName + ".enc";
                 int generationCount = 1;
@@ -78,8 +81,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 }
                 long startTimeStamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
 
-                new Utils().AES_EncryptStream(inStream, outFileName, passPhrase);
+                new Utils().AES_EncryptStream(this.customerGuid,inStream, outFileName, properties.ContentLength, backupName, passPhrase);
                 FileInfo fi = new FileInfo(outFileName);
+                //Check filelengths, make sure they match? or are reasonable
                 //Delete bacpac file on Azure 
                 blobClient.Delete();
                 FileDTO fileDTO = new FileDTO();
