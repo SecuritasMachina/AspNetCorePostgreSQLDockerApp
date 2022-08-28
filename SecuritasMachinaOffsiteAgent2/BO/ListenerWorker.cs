@@ -210,7 +210,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         foreach (FileDTO fileDTO in stagingContainerDirListingDTO1.fileDTOs)
                         {
 
-                            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Checking {fileDTO.FileName}");
+                            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Queuing {fileDTO.FileName}");
                             // spawn workers for files
                             BackupWorker backupWorker = new BackupWorker(RunTimeSettings.topicCustomerGuid, azureBlobEndpoint, azureBlobContainerName, fileDTO.FileName, envPassPhrase);
                             ThreadUtils.addToQueue(backupWorker);

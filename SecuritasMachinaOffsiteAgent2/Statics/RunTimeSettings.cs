@@ -22,10 +22,11 @@ namespace Common.Statics
         {
             get
             {
-                if (Debugger.IsAttached) { return "https://localhost:7074/"; }
+                if (Debugger.IsAttached) { return "http://localhost:5002/"; }
                 else
                 {
-                    return "https://securitasmachinacoordinater.azurewebsites.net/";
+                    return "https://cloudbackup.securitasmachina.com/";
+                   // return "https://securitasmachinacoordinater.azurewebsites.net/";
 
                 }
             }
