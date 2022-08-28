@@ -168,7 +168,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 // start processing 
                 await processor.StartProcessingAsync();
-
+                //Start up background jobs
                 ArchiveWorker archiveWorker = new ArchiveWorker(RunTimeSettings.topicCustomerGuid, mountedDir, RetentionDays);
 
                 Task task = Task.Run(() => archiveWorker.StartAsync());
@@ -220,7 +220,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     }
                     catch (Exception ex)
                     {
-                        HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", $"Listening on topiccustomerGuid:{RunTimeSettings.topicCustomerGuid} {ex.Message}");
+                        HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", $"ListenerWorker Listening on topiccustomerGuid:{RunTimeSettings.topicCustomerGuid} {ex.Message}");
                         Console.WriteLine(ex.Message);
                     }
 
@@ -259,7 +259,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 string passPhrase = "";
 
-
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"msgType:{msgType} genericMessage.ssg:{genericMessage.msg.Length}" );
 
                 //Console.WriteLine($"Received: {body}");
                 if (msgType == "restoreFile")
@@ -267,9 +267,15 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     //Console.WriteLine("Starting Restore for:" + backupName);
                    // string backupName = ;
                     string inFileName = mountedDir + msgObj.backupName;
-                    RestoreWorker backupWorker = new RestoreWorker(RunTimeSettings.topicCustomerGuid, azureBlobRestoreContainerName, azureBlobEndpoint, azureBlobContainerName, inFileName, envPassPhrase);
-                    backupWorker.StartAsync();
+                    RestoreWorker restoreWorker = new RestoreWorker(RunTimeSettings.topicCustomerGuid, azureBlobRestoreContainerName, azureBlobEndpoint, azureBlobContainerName, inFileName, envPassPhrase);
+                   // restoreWorker.StartAsync();
+                    Task restoreWorkerTask = Task.Run(() => restoreWorker.StartAsync());
 
+                }
+                else if (msgType == "backupComplete")
+                {
+                    HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"{msgObj.backupName} Backup Complete");
+                    //   Utils.doDirListing(RunTimeSettings.topicCustomerGuid, mountedDir);
                 }
                 else if (msgType == "DirList")
                 {
@@ -282,14 +288,14 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+               // Console.WriteLine(ex.Message);
                 GenericMessage genericMessage2 = new GenericMessage();
 
                 genericMessage2.msgType = "restoreComplete";
                 genericMessage2.msg = ex.Message.ToString();
                 genericMessage2.guid = RunTimeSettings.topicCustomerGuid;
 
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", ex.Message.ToString());
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", "ListenerWorker:"+ex.Message.ToString());
             }
             // complete the message. message is deleted from the queue. 
             await args.CompleteMessageAsync(args.Message);

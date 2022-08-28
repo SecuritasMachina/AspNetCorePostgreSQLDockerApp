@@ -65,8 +65,8 @@ namespace Common.Utils.Comm
                     break;
                 }
                 catch (Exception ex) {
-                    Console.Out.WriteLine($"Error connecting to Node, retrying..:" );
-                    Thread.Sleep(5 * 1000); }
+                    Console.Out.WriteLine($"Error connecting to Node, Attempt #{loopCount}, retrying.." );
+                    Thread.Sleep(30 * 1000); }
             }
         }
 

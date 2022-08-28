@@ -23,7 +23,9 @@ namespace Common.Statics
         {
             get
             {
-                if (Debugger.IsAttached) { return "http://localhost:5002/"; }
+                if (Debugger.IsAttached) { 
+                    return "http://localhost:5002/";
+                }
                 else
                 {
                     return "https://cloudbackup.securitasmachina.com/";

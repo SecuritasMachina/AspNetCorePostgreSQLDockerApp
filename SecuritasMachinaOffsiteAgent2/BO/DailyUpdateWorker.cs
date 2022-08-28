@@ -41,7 +41,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 }
                 catch (Exception ex)
                 {
-                    HTTPUtils.Instance.writeToLog(this.customerGuid, "ERROR", inPath + " " + ex.ToString());
+                    HTTPUtils.Instance.writeToLog(this.customerGuid, "ERROR", inPath + " DailyUpdateWorker:" + ex.ToString());
 
                 }
                 Thread.Sleep(6 * 60 * 60 * 1000 * RunTimeSettings.PollBaseTime);

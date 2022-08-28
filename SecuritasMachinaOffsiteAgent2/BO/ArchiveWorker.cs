@@ -34,13 +34,16 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     foreach (FileInfo file in Files2)
                     {
                         if (file.LastWriteTime < DateTime.Now.AddDays(retentionDays * -1))
+                        {
                             file.Delete();
+                            HTTPUtils.Instance.writeToLog(this.customerGuid, "DELETING", file.Name);
+                        }
 
                     }
                 }
                 catch (Exception ex)
                 {
-                    HTTPUtils.Instance.writeToLog(this.customerGuid, "ERROR", inPath + " " + ex.ToString());
+                    HTTPUtils.Instance.writeToLog(this.customerGuid, "ERROR", inPath + " ArchiveWorker: " + ex.ToString());
 
                 }
                 Thread.Sleep(6*60*60 * 1000* RunTimeSettings.PollBaseTime);

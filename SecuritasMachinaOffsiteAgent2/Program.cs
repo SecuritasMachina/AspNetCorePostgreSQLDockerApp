@@ -2,7 +2,7 @@
 //Console.WriteLine("Hello, World!");
 using SecuritasMachinaOffsiteAgent.BO;
 
-Console.WriteLine("Starting Agent v2.1.1");
+Console.WriteLine("Starting Agent v2.1.2");
 
 await new ListenerWorker().startAsync();
 //Console.WriteLine("ending");
