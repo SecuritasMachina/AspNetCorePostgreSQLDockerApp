@@ -37,6 +37,7 @@ namespace Common.Utils.Comm
             {
                 HttpClientHandler handler = new HttpClientHandler()
                 {
+                    ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator,
                     AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
                 };
                 _client = new HttpClient(handler);
@@ -57,7 +58,8 @@ namespace Common.Utils.Comm
                     dynamic stuff = JsonConvert.DeserializeObject(result);
 
                     RunTimeSettings.SBConnectionString = stuff.serviceBusEndPoint;
-                    RunTimeSettings.topicNamecustomerGuid = stuff.topicName;
+                    RunTimeSettings.sbrootConnectionString = stuff.sbrootConnectionString;
+                    //RunTimeSettings.topicNamecustomerGuid = stuff.topicName;
                     //RunTimeSettings.topicCustomerGuid = pcustomerGuid;
                     RunTimeSettings.authKey = stuff.authKey;
                     RunTimeSettings.PollBaseTime = stuff.PollBaseTime == null ? (int)1 : (int)stuff.PollBaseTime;
@@ -65,7 +67,7 @@ namespace Common.Utils.Comm
                     break;
                 }
                 catch (Exception ex) {
-                    Console.Out.WriteLine($"Error connecting to Node, Attempt #{loopCount}, retrying.." );
+                    Console.Out.WriteLine($"Error connecting to Node, Attempt #{loopCount} OF 100, retrying.."+ex.ToString() );
                     Thread.Sleep(30 * 1000); }
             }
         }
@@ -114,7 +116,7 @@ namespace Common.Utils.Comm
            /* string url = RunTimeSettings.WebListenerURL + "api/v3/postBackupHistory/" + RunTimeSettings.topicCustomerGuid + "/" + Uri.EscapeUriString(backupFile) + "/" + Uri.EscapeUriString(newFileName) + "/" + fileLength + "/" + startTimeStamp;
             try
             {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);Uri
                 request.AutomaticDecompression = DecompressionMethods.GZip;
                 request.Headers.Add("AuthKey", RunTimeSettings.authKey);
                 using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
@@ -144,7 +146,7 @@ namespace Common.Utils.Comm
         }
         public void putCache(string topiccustomerGuid, string messageType, string json)
         {
-            //Console.Out.WriteLine("putCache:" + " messageType:" + messageType + " json:" + json);
+            //Console.Out.WriteLine("putCache:" + " messageType:" + messageType + " json:" + jseon);
             /*try
             {
                 string payload = Uri.EscapeUriString(messageType);

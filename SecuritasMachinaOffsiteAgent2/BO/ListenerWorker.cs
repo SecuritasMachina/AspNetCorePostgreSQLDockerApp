@@ -22,7 +22,9 @@ using Common.Statics;
 using Common.Utils.Comm;
 using Common.DTO.V2;
 using SecuritasMachinaOffsiteAgent.DTO.V2;
-
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+using System.Net.Security;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
@@ -37,16 +39,14 @@ namespace SecuritasMachinaOffsiteAgent.BO
         static int RetentionDays = 45;// Environment.GetEnvironmentVariable("RetentionDays");
 
         static string mountedDir = "/mnt/offsite/";
-        // name of your Service Bus queue
-
-        //static string topicName = "client";
-
         // the client that owns the connection and can be used to create senders and receivers
         ServiceBusClient client;
 
         // the processor that reads and processes messages from the queue
         ServiceBusProcessor processor;
         // private int tLoopCount;
+
+
 
         internal async Task startAsync()
         {
@@ -58,12 +58,16 @@ namespace SecuritasMachinaOffsiteAgent.BO
             if (azureBlobRestoreContainerName == null)
                 azureBlobRestoreContainerName = "restored";
             RunTimeSettings.topicCustomerGuid = Environment.GetEnvironmentVariable("customerGuid");
+
+            Console.WriteLine();
             Console.WriteLine("Starting ListenerWorker azureBlobEndpoint:" + azureBlobEndpoint);
             Console.WriteLine("azureBlobContainerName:" + azureBlobContainerName);
             Console.WriteLine("azureBlobRestoreContainerName:" + azureBlobRestoreContainerName);
             Console.WriteLine("customerGuid:" + RunTimeSettings.topicCustomerGuid);
             Console.WriteLine("RetentionDays:" + RetentionDays);
-
+            
+            
+            
             if (envPassPhrase != null)
                 Console.WriteLine("passPhrase Length:" + envPassPhrase.Length);
 
@@ -72,6 +76,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             if (RunTimeSettings.SBConnectionString == null || RunTimeSettings.SBConnectionString.Length == 0)
             {
                 Console.WriteLine("!!! Unable to retrieve configuration !!!");
+                Environment.Exit(1);
             }
 
             // Create the client object that will be used to create sender and receiver objects
@@ -147,8 +152,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", "...Error deleting at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure VM instance has FULL access to Google cloud storage");
-                Console.WriteLine("...Error deleting at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure Blob endpoint and container name match Azure & Access Key URL");
+                Console.Write("Testing Azure Blob Endpoint at " + azureBlobEndpoint + " " + azureBlobContainerName);
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", "...Error listing at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure VM instance has FULL access to Azure cloud storage "+ex.ToString());
+                Console.WriteLine("...Error listing  at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure Blob endpoint and container name match Azure & Access Key URL");
             }
 
 
@@ -184,7 +190,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     try
                     {
                         DirListingDTO agentDirList = Utils.doDirListing(RunTimeSettings.topicCustomerGuid, mountedDir);
-                        Console.WriteLine("Scanning " + azureBlobEndpoint + " " + azureBlobContainerName);
+                        Console.WriteLine("Scanning Directories");
                         DirListingDTO stagingContainerDirListingDTO1 = await Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync());
 
                         BlobContainerClient restoredContainerName = blobServiceClient.GetBlobContainerClient(azureBlobRestoreContainerName);
@@ -198,15 +204,15 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         statusDTO.TotalProcessorTime = Process.GetCurrentProcess().TotalProcessorTime.Ticks;
                         statusDTO.WorkingSet64 = Process.GetCurrentProcess().WorkingSet64;
                         statusDTO.TotalMemory=System.GC.GetTotalMemory(false);
-                        PerformanceCounter ramCounter = new PerformanceCounter("Memory", "Available Bytes");
-                        statusDTO.TotalMemory = (long)ramCounter.NextValue() ;
+                       // PerformanceCounter ramCounter = new PerformanceCounter("Memory", "Available Bytes");
+                       // statusDTO.TotalMemory = (long)ramCounter.NextValue() ;
                         statusDTO.AgentFileDTOs = agentDirList.fileDTOs;
                         statusDTO.StagingFileDTOs = stagingContainerDirListingDTO1.fileDTOs;
                         statusDTO.RestoredListingDTO = restoredListingDTO.fileDTOs;
 
-
+                        
                         ServiceBusUtils.postMsg2ControllerAsync("agent/status", RunTimeSettings.topicCustomerGuid, "status", JsonConvert.SerializeObject(statusDTO));
-
+                        //look for files to backup
                         foreach (FileDTO fileDTO in stagingContainerDirListingDTO1.fileDTOs)
                         {
 

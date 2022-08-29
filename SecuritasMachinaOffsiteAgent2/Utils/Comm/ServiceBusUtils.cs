@@ -20,10 +20,11 @@ namespace Common.Utils.Comm
         static ServiceBusSender? sender;
         public static async Task postMsg2ControllerAsync(string? nameSpace, string? guid, string? messageType, string? json)
         {
+           // Console.WriteLine($"nameSpace:{nameSpace} messageType:{messageType} RunTimeSettings.sbrootConnectionString {RunTimeSettings.sbrootConnectionString}");
             try
             {
                 if (client == null)
-                    client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
+                    client = new ServiceBusClient(RunTimeSettings.sbrootConnectionString);
                 if (sender == null)
                     sender = client.CreateSender("coordinator");
                 GenericMessage genericMessage = new GenericMessage();
@@ -36,11 +37,12 @@ namespace Common.Utils.Comm
                 ServiceBusMessageBatch messageBatch = await sender.CreateMessageBatchAsync();
                 messageBatch.TryAddMessage(new ServiceBusMessage(JsonConvert.SerializeObject(genericMessage)));
                 await sender.SendMessagesAsync(messageBatch);
-
+               // Console.WriteLine($"wROTE TO nameSpace:{nameSpace} messageType:{messageType} RunTimeSettings.sbrootConnectionString {RunTimeSettings.sbrootConnectionString}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+               // HTTPUtils.Instance.writeToLog(guid, "ERROR", "postMsg2ControllerAsync:"+ ex.ToString());
+                Console.WriteLine("postMsg2ControllerAsync "+ex.ToString()+"\r\n"+ RunTimeSettings.sbrootConnectionString);
             }
         }
     }

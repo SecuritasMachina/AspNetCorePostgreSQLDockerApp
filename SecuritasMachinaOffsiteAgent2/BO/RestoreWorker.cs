@@ -70,15 +70,15 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 fileDTO.FileName = baseFilename;
                 fileDTO.Status = "Success";
                 //fileDTO.length = outStream.Length;
-                myJson = JsonConvert.SerializeObject(fileDTO);
+                
                 genericMessage2 = new GenericMessage();
 
                 genericMessage2.msgType = "restoreComplete";
-                genericMessage2.msg = myJson;
+                genericMessage2.msg = JsonConvert.SerializeObject(fileDTO);
                 genericMessage2.guid = customerGuid;
 
 
-                HTTPUtils.Instance.putCache(customerGuid, fileDTO.FileName + "-" + genericMessage2.msgType + "-" + customerGuid, JsonConvert.SerializeObject(genericMessage2));
+                HTTPUtils.Instance.putCache( fileDTO.FileName + "-" + genericMessage2.msgType + "-" + customerGuid, genericMessage2.msgType,JsonConvert.SerializeObject(genericMessage2));
                 HTTPUtils.Instance.writeToLog(customerGuid, "RESTORE-END", "Restore Completed for "+ baseFilename);
 
             }

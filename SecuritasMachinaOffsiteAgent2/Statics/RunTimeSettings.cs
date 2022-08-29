@@ -9,9 +9,9 @@ namespace Common.Statics
 {
     public class RunTimeSettings
     {
-        
+        public static string? sbrootConnectionString = "";
         public static string? SBConnectionString = "";
-        public static string? topicNamecustomerGuid;
+       // public static string? topicNamecustomerGuid;
         public static string? passPhrase;
         public static string? topicCustomerGuid;
         public static string? authKey;
