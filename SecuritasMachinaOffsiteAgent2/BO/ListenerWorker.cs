@@ -265,7 +265,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 string passPhrase = "";
 
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"msgType:{msgType} genericMessage.ssg:{genericMessage.msg.Length}" );
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "TRACE", $"Agent Received msgType:{msgType} genericMessage.ssg:{genericMessage.msg.Length}" );
 
                 //Console.WriteLine($"Received: {body}");
                 if (msgType == "restoreFile")
