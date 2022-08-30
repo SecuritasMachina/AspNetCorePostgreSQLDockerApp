@@ -52,11 +52,13 @@ namespace Common.Utils.Comm
                 loopCount++;
                 try
                 {
-                    HttpResponseMessage response = _client.GetAsync("api/v2/config/" + pcustomerGuid).Result;
+                    RunTimeSettings.AppVersion = VersionUtil.getAppVersion();
+                    string url = "api/v3/config/" + Uri.EscapeDataString(RunTimeSettings.AppVersion) + "/" + pcustomerGuid ;
+                    HttpResponseMessage response = _client.GetAsync(url).Result;
                     response.EnsureSuccessStatusCode();
                     string result = response.Content.ReadAsStringAsync().Result;
                     dynamic stuff = JsonConvert.DeserializeObject(result);
-
+                    
                     RunTimeSettings.SBConnectionString = stuff.serviceBusEndPoint;
                     RunTimeSettings.sbrootConnectionString = stuff.sbrootConnectionString;
                     //RunTimeSettings.topicNamecustomerGuid = stuff.topicName;

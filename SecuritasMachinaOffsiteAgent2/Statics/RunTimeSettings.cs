@@ -18,6 +18,7 @@ namespace Common.Statics
         public static string? clientSubscriptionName;
         public static string? controllerTopicName;
         public static int PollBaseTime=1;
+        public static string AppVersion;
 
         public static string WebListenerURL
         {

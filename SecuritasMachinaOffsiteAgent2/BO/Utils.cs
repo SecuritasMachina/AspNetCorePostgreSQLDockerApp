@@ -138,6 +138,20 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 fsIn.Close();
 
             }
+            catch(Azure.RequestFailedException ex)
+            {
+                if (ex.ToString().ToLower().IndexOf("BlobNotFound".ToLower()) > 0)
+                {
+                    string msg = $"{pBaseFileName} disappeared before it could be read, is there another agent running?";
+                    HTTPUtils.Instance.writeToLog(pCustomerGuid, "INFO", msg);
+                    return;
+                }
+                else
+                {
+                    HTTPUtils.Instance.writeToLog(pCustomerGuid, "ERROR", pBaseFileName + " " + ex.ToString());
+                }
+                
+            }
             catch (Exception ex)
             {
 

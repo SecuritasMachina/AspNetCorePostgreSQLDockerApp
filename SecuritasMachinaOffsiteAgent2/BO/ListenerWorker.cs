@@ -36,8 +36,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         static string? envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
         static string? azureBlobContainerName = Environment.GetEnvironmentVariable("azureBlobContainerName");
         static string? azureBlobRestoreContainerName = Environment.GetEnvironmentVariable("azureBlobRestoreContainerName");
-        static int RetentionDays = 45;// Environment.GetEnvironmentVariable("RetentionDays");
-
+        static int RetentionDays = 45;
         static string mountedDir = "/mnt/offsite/";
         // the client that owns the connection and can be used to create senders and receivers
         ServiceBusClient client;
@@ -72,7 +71,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 Console.WriteLine("passPhrase Length:" + envPassPhrase.Length);
 
             HTTPUtils.Instance.populateRuntime(RunTimeSettings.topicCustomerGuid);
-            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"..azureBlobEndpoint length: {azureBlobEndpoint.Length} azureBlobContainerName:{azureBlobContainerName} azureBlobRestoreContainerName:{azureBlobRestoreContainerName} RetentionDays:{RetentionDays} passPhrase Length: {envPassPhrase.Length}");
+            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "CONFIGINFO", $"azureBlobEndpoint length: {azureBlobEndpoint.Length} azureBlobContainerName:{azureBlobContainerName} azureBlobRestoreContainerName:{azureBlobRestoreContainerName} RetentionDays:{RetentionDays} passPhrase Length: {envPassPhrase.Length}");
             if (RunTimeSettings.SBConnectionString == null || RunTimeSettings.SBConnectionString.Length == 0)
             {
                 Console.WriteLine("!!! Unable to retrieve configuration !!!");
@@ -148,13 +147,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 {
  
                 }
-                Console.WriteLine("Success");
+                Console.WriteLine("...Success");
             }
             catch (Exception ex)
             {
-                Console.Write("Testing Azure Blob Endpoint at " + azureBlobEndpoint + " " + azureBlobContainerName);
+                
                 HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", "...Error listing at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure VM instance has FULL access to Azure cloud storage "+ex.ToString());
-                Console.WriteLine("...Error listing  at " + azureBlobEndpoint + " " + azureBlobContainerName + " - Ensure Blob endpoint and container name match Azure & Access Key URL");
+               
             }
 
 
@@ -162,9 +161,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
             try
             {
                 // create a processor that we can use to process the messages
-
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Starting Listener on {RunTimeSettings.topicCustomerGuid}");
                 processor = client.CreateProcessor(RunTimeSettings.topicCustomerGuid, RunTimeSettings.clientSubscriptionName, new ServiceBusProcessorOptions());
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Listening on {RunTimeSettings.topicCustomerGuid}");
+                
                 // Console.WriteLine("Listening");
                 // add handler to process messages
                 processor.ProcessMessageAsync += MessageHandler;
@@ -174,6 +173,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 // start processing 
                 await processor.StartProcessingAsync();
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Listening on {RunTimeSettings.topicCustomerGuid}");
                 //Start up background jobs
                 ArchiveWorker archiveWorker = new ArchiveWorker(RunTimeSettings.topicCustomerGuid, mountedDir, RetentionDays);
 
@@ -185,12 +185,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 
                 while (true)
                 {
-                    HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "TRACE", $"Scanning azureBlobEndpoint length:{azureBlobEndpoint.Length} azureBlobContainerName:{azureBlobContainerName}");
+                    HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "TRACE", $"Scanning Azure Blob ContainerName:{azureBlobContainerName}");
 
                     try
                     {
                         DirListingDTO agentDirList = Utils.doDirListing(RunTimeSettings.topicCustomerGuid, mountedDir);
-                        Console.WriteLine("Scanning Directories");
+                        
                         DirListingDTO stagingContainerDirListingDTO1 = await Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync());
 
                         BlobContainerClient restoredContainerName = blobServiceClient.GetBlobContainerClient(azureBlobRestoreContainerName);

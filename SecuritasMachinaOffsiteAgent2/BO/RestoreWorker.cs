@@ -51,7 +51,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 FileDTO fileDTO = new FileDTO();
                 fileDTO.FileName = restoreName;
                 fileDTO.Status = "InProgress";
-                //fileDTO.length = outStream.Length;
+                
                 string myJson = JsonConvert.SerializeObject(fileDTO);
                 GenericMessage genericMessage2 = new GenericMessage();
                 
@@ -60,8 +60,30 @@ namespace SecuritasMachinaOffsiteAgent.BO
                
                 BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(azureBlobRestoreContainerName);
 
-                string restoreFileName = restoreName.Substring(0, restoreName.LastIndexOf("."));
-                var blockBlobClient = containerClient.GetBlobClient(baseFilename.Replace(".enc", ""));
+                
+                int generationCount = 1;
+                string restoreFileName = baseFilename.Replace(".enc", "");
+                string baseRestoreName = restoreFileName;
+                var blockBlobClient = containerClient.GetBlobClient(restoreFileName);
+                while (true)
+                {
+                    if (generationCount > 9999)
+                    {
+                        break;
+                    }
+                    if (blockBlobClient.Exists())
+                    {
+                        
+                        HTTPUtils.Instance.writeToLog(customerGuid, "INFO", $"{restoreFileName} exists in {azureBlobRestoreContainerName}, retrying as {baseRestoreName + "-" + generationCount}");
+                        restoreFileName = baseRestoreName + "-" + generationCount;
+                        blockBlobClient = containerClient.GetBlobClient(restoreFileName);
+                        generationCount++;
+                    }
+                    else { break; }
+                }
+                
+
+               
                 var outStream = await blockBlobClient.OpenWriteAsync(true);
                 
                    // passPhrase = envPassPhrase;
@@ -78,8 +100,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage2.guid = customerGuid;
 
 
-                HTTPUtils.Instance.putCache( fileDTO.FileName + "-" + genericMessage2.msgType + "-" + customerGuid, genericMessage2.msgType,JsonConvert.SerializeObject(genericMessage2));
-                HTTPUtils.Instance.writeToLog(customerGuid, "RESTORE-END", "Restore Completed for "+ baseFilename);
+                HTTPUtils.Instance.putCache(baseFilename + "-" + genericMessage2.msgType + "-" + customerGuid, genericMessage2.msgType,JsonConvert.SerializeObject(genericMessage2));
+                HTTPUtils.Instance.writeToLog(customerGuid, "RESTORE-END", $"Restore Completed for {baseFilename} restored as {restoreFileName}");
 
             }
             catch (Exception ex)

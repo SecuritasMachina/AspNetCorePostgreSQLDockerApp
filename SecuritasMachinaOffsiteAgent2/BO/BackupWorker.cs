@@ -22,7 +22,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         private string backupName;
         private string passPhrase;
         //private BackgroundWorker worker;
-        private int loopCount = 0;
+        
         public override string ToString()
         {
             return this.backupName;
@@ -42,18 +42,23 @@ namespace SecuritasMachinaOffsiteAgent.BO
         public async Task<object> StartAsync()
         {
             Console.WriteLine("Starting BackupWorker for " + backupName);
-            //string genericMessageJson;
+            
             // Create a BlobServiceClient object which will be used to create a container client
             GenericMessage genericMessage = new GenericMessage();
             try
             {
-                loopCount++;
-                //Console.WriteLine("Looking for: " + backupName);
-                //TODO send post with status
-                //report progress
+
                 BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
                 BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
+                
                 BlobClient blobClient = containerClient.GetBlobClient(backupName);
+                if (!blobClient.Exists())
+                {
+                    string msg = $"{backupName} disappeared before it could be read, is there another agent running using azureBlobContainerName:{BlobContainerName}";
+                    HTTPUtils.Instance.writeToLog(this.customerGuid, "INFO",msg);
+                    
+                    return msg;
+                }
                 BlobProperties properties = await blobClient.GetPropertiesAsync();
 
                 Stream inStream = blobClient.OpenRead();

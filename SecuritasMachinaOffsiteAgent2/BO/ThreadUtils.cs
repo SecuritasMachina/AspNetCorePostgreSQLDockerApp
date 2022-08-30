@@ -10,7 +10,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
     internal class ThreadUtils
     {
 
-        Hashtable activeThreadHash = new Hashtable();
+        
         static Dictionary<string, BackupWorker> dt = new Dictionary<string, BackupWorker>();
         internal static void deleteFromQueue(string key)
         {

@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 
-Console.WriteLine("Starting Agent v2.1.6");
+Console.WriteLine("Starting Agent "+ VersionUtil.getAppVersion());
 ServicePointManager.ServerCertificateValidationCallback =
                delegate (object sender, X509Certificate certificate, X509Chain
     chain, SslPolicyErrors sslPolicyErrors)
