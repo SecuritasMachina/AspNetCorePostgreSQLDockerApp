@@ -26,14 +26,15 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
 
             //Console.Write("Testing Azure Blob Endpoint at " + RunTimeSettings.azureBlobEndpoint + " " + RunTimeSettings.azureBlobContainerName);
-            if (blobServiceClient == null)
-                blobServiceClient = new BlobServiceClient(RunTimeSettings.azureBlobEndpoint);
-            if (stagingContainerClient == null)
-                stagingContainerClient = blobServiceClient.GetBlobContainerClient(RunTimeSettings.azureBlobContainerName);
-
-            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Starting status worker");
+ 
+            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Starting Status worker");
             while (true)
             {
+                if (blobServiceClient == null)
+                    blobServiceClient = new BlobServiceClient(RunTimeSettings.azureBlobEndpoint);
+                if (stagingContainerClient == null)
+                    stagingContainerClient = blobServiceClient.GetBlobContainerClient(RunTimeSettings.azureBlobContainerName);
+
                 DirListingDTO agentDirList = Utils.doDirListing(RunTimeSettings.topicCustomerGuid, RunTimeSettings.mountedDir);
 
                 DirListingDTO stagingContainerDirListingDTO1 = await Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync());

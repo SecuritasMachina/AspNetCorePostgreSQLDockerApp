@@ -193,12 +193,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 ScanStageDirWorker scanStageDirWorker = new ScanStageDirWorker();
                 Task scanStageDirWorkerTask = Task.Run(() => scanStageDirWorker.StartAsync());
 
-                while (true)
-                {
 
-                    Thread.Sleep(60 * 1000 * RunTimeSettings.PollBaseTime);
-
-                }
 
             }
             finally
@@ -209,16 +204,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 //await client.DisposeAsync();
             }
         }
-        private static void MyFunction()
-        {
-            // Loop in here
-        }
-        public static void RunBackup(object s)
-        {
-            BackupWorker say = s as BackupWorker;
-            say.StartAsync();
-            //Console.WriteLine(say);
-        }
+
+        
         // handle received messages
         static async Task MessageHandler(ProcessMessageEventArgs args)
         {

@@ -25,10 +25,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
             else
             {
                 dt.Add(backupWorker.ToString(), backupWorker);
-                ThreadPool.QueueUserWorkItem(x =>
+                ThreadPool.QueueUserWorkItem(async x =>
                 {
-                    backupWorker.StartAsync();
-                    
+                    await backupWorker.StartAsync();
+                    deleteFromQueue(backupWorker.ToString());
+
                 // countdownEvent.Signal();
                 });
             }
