@@ -41,7 +41,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         public async Task<object> StartAsync()
         {
-            Console.WriteLine("Starting BackupWorker for " + backupName);
+            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Starting BackupWorker worker for {backupName}");
+           // Console.WriteLine("Starting BackupWorker for " + backupName);
             
             // Create a BlobServiceClient object which will be used to create a container client
             GenericMessage genericMessage = new GenericMessage();

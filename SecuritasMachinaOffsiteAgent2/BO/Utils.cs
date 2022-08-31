@@ -272,5 +272,28 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             return ret;
         }
+
+        internal static void UpdateOffsiteBytes(string customerGuid, string inPath)
+        {
+            HTTPUtils.Instance.writeToLog(customerGuid, "TRACE", $"Scanning {inPath} total size");
+            DirectoryInfo directoryInfo = new DirectoryInfo(inPath);
+            List<FileInfo> Files2 = directoryInfo.GetFiles("*").ToList();
+            long tsize = 0;
+            try
+            {
+                foreach (FileInfo file in Files2)
+                {
+                    tsize += file.Length;
+
+                }
+                HTTPUtils.Instance.writeToLog(customerGuid, "TOTALOFFSITEBYTES", $"{tsize}");
+                HTTPUtils.Instance.writeToLog(customerGuid, "TOTALOFFSITECOUNT", $"{Files2.LongCount()}");
+            }
+            catch (Exception ex)
+            {
+                HTTPUtils.Instance.writeToLog(customerGuid, "ERROR", inPath + " DailyUpdateWorker:" + ex.ToString());
+
+            }
+        }
     }
 }

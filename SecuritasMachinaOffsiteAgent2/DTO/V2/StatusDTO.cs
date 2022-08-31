@@ -13,6 +13,7 @@ namespace SecuritasMachinaOffsiteAgent.DTO.V2
         public List<FileDTO> AgentFileDTOs = new List<FileDTO>();
         public List<FileDTO> StagingFileDTOs = new List<FileDTO>();
         public  List<FileDTO> RestoredListingDTO = new List<FileDTO>();
+        public long activeJobs { get; set; }
 
         public long TotalMemory { get; set; }
 

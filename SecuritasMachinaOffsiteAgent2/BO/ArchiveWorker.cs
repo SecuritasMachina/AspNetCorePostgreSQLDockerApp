@@ -23,6 +23,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         public async Task<object> StartAsync()
         {
+            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Starting archive worker");
+
             while (true)
             {
                 HTTPUtils.Instance.writeToLog(this.customerGuid, "TRACE", $"Scanning {inPath} for Last Write Time over {retentionDays} old");
