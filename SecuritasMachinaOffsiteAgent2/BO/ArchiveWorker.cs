@@ -12,7 +12,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         private string inPath;
         private string customerGuid;
 
-        public ArchiveWorker(string customerGuid, string inPath,int retentionDays)
+        public ArchiveWorker(string customerGuid, string inPath, int retentionDays)
         {
             this.customerGuid = customerGuid;
             this.inPath = inPath;
@@ -21,37 +21,42 @@ namespace SecuritasMachinaOffsiteAgent.BO
         }
 
 
-        public async Task<object> StartAsync()
+        public void StartAsync()
         {
-            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Starting archive worker");
+            
 
-            while (true)
+
+            DateTime purgeOlderDate = DateTime.Now.AddDays(retentionDays * -1);
+
+            HTTPUtils.Instance.writeToLog(this.customerGuid, "INFO", $"Scanning {inPath} for Last Write Time over {retentionDays} old ({purgeOlderDate.ToShortDateString()})");
+            DirectoryInfo directoryInfo = new DirectoryInfo(inPath);
+            List<FileInfo> Files2 = directoryInfo.GetFiles("*").ToList();
+
+            try
             {
-                HTTPUtils.Instance.writeToLog(this.customerGuid, "TRACE", $"Scanning {inPath} for Last Write Time over {retentionDays} old");
-                DirectoryInfo directoryInfo = new DirectoryInfo(inPath);
-                List<FileInfo> Files2 = directoryInfo.GetFiles("*").ToList();
-
-                try
+                bool filesDeleted = false;
+                foreach (FileInfo file in Files2)
                 {
-                    foreach (FileInfo file in Files2)
+                    if (file.LastWriteTime < purgeOlderDate)
                     {
-                        if (file.LastWriteTime < DateTime.Now.AddDays(retentionDays * -1))
-                        {
-                            file.Delete();
-                            HTTPUtils.Instance.writeToLog(this.customerGuid, "DELETING", file.Name);
-                        }
-
+                        file.Delete();
+                        HTTPUtils.Instance.writeToLog(this.customerGuid, "DELETING", file.Name);
+                        filesDeleted = true;
                     }
-                }
-                catch (Exception ex)
-                {
-                    HTTPUtils.Instance.writeToLog(this.customerGuid, "ERROR", inPath + " ArchiveWorker: " + ex.ToString());
 
                 }
-                Thread.Sleep(6*60*60 * 1000* RunTimeSettings.PollBaseTime);
+                if (filesDeleted)
+                    Utils.UpdateOffsiteBytes(RunTimeSettings.topicCustomerGuid, RunTimeSettings.mountedDir);
             }
-          
+            catch (Exception ex)
+            {
+                HTTPUtils.Instance.writeToLog(this.customerGuid, "ERROR", inPath + " ArchiveWorker: " + ex.ToString());
+
+            }
+            Thread.Sleep(6 * 60 * 60 * 1000 * RunTimeSettings.PollBaseTime);
         }
+
+
 
 
     }

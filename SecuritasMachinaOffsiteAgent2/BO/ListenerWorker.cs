@@ -25,6 +25,9 @@ using SecuritasMachinaOffsiteAgent.DTO.V2;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
+using System.Timers;
+using Timer = System.Timers.Timer;
+using Object = System.Object;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
@@ -180,19 +183,36 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 await processor.StartProcessingAsync();
                 HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Listening on {RunTimeSettings.topicCustomerGuid}");
                 //Start up background jobs
-                ArchiveWorker archiveWorker = new ArchiveWorker(RunTimeSettings.topicCustomerGuid, RunTimeSettings.mountedDir, RunTimeSettings.RetentionDays);
 
-                Task task = Task.Run(() => archiveWorker.StartAsync());
+                Timer archiveWorkerTimer = new Timer();
+                archiveWorkerTimer.Interval = 1000 * 60 * 60 * 6;              
+                archiveWorkerTimer.Elapsed += archiveWorkerOnTimedEvent;              
+                archiveWorkerTimer.AutoReset = true; archiveWorkerTimer.Enabled = true;
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Started Retention Expired worker for {RunTimeSettings.mountedDir}");
 
-                UpdateOffSiteBytesWorker updateOffSiteBytesWorker = new UpdateOffSiteBytesWorker(RunTimeSettings.topicCustomerGuid, RunTimeSettings.mountedDir, RunTimeSettings.RetentionDays);
+                Timer statusWorkerTimer = new Timer();
+                statusWorkerTimer.Interval = 1000 * 60 * 1;              
+                statusWorkerTimer.Elapsed += statusWorkerOnTimedEvent;              
+                statusWorkerTimer.AutoReset = true; statusWorkerTimer.Enabled = true;
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Started Status worker");
 
-                Task dailyTask = Task.Run(() => updateOffSiteBytesWorker.StartAsync());
+                Timer offSiteWorkerTimer = new Timer();
+                offSiteWorkerTimer.Interval = 1000 * 60 * 10;              
+                offSiteWorkerTimer.Elapsed += offsiteWorkerOnTimedEvent;             
+                offSiteWorkerTimer.AutoReset = true; offSiteWorkerTimer.Enabled = true;
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Started OffSite worker for {RunTimeSettings.mountedDir}");
 
-                StatusWorker statusWorker = new StatusWorker();
-                Task statusTask = Task.Run(() => statusWorker.StartAsync());
-                ScanStageDirWorker scanStageDirWorker = new ScanStageDirWorker();
-                Task scanStageDirWorkerTask = Task.Run(() => scanStageDirWorker.StartAsync());
+                Timer scanStageWorkerTimer = new Timer();
+                scanStageWorkerTimer.Interval = 1000 * 60 * 1;              
+                scanStageWorkerTimer.Elapsed += scanStageWorkerOnTimedEvent;            
+                scanStageWorkerTimer.AutoReset = true; scanStageWorkerTimer.Enabled = true;
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Started Scan worker for container {RunTimeSettings.azureBlobContainerName}");
 
+
+                while (true)
+                {
+                    Thread.Sleep(1000 * 60);
+                }
 
 
             }
@@ -204,8 +224,29 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 //await client.DisposeAsync();
             }
         }
+        private void scanStageWorkerOnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
+        {
+            ScanStageDirWorker scanStageDirWorker = new ScanStageDirWorker();
+            scanStageDirWorker.StartAsync();
+        }
+        private void offsiteWorkerOnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
+        {
 
-        
+            UpdateOffSiteBytesWorker updateOffSiteBytesWorker = new UpdateOffSiteBytesWorker(RunTimeSettings.topicCustomerGuid, RunTimeSettings.mountedDir, RunTimeSettings.RetentionDays);
+
+            updateOffSiteBytesWorker.StartAsync();
+        }
+        private void statusWorkerOnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
+        {
+            StatusWorker statusWorker = new StatusWorker();
+            statusWorker.StartAsync();
+        }
+        private void archiveWorkerOnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
+        {
+            ArchiveWorker archiveWorker = new ArchiveWorker(RunTimeSettings.topicCustomerGuid, RunTimeSettings.mountedDir, RunTimeSettings.RetentionDays);
+
+            archiveWorker.StartAsync();
+        }
         // handle received messages
         static async Task MessageHandler(ProcessMessageEventArgs args)
         {

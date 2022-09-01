@@ -21,17 +21,15 @@ namespace SecuritasMachinaOffsiteAgent.BO
         }
 
 
-        public async Task<object> StartAsync()
+        public void StartAsync()
         {
-            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Starting OffSite worker for {inPath}");
+           
 
-            while (true)
-            {
-                Utils.UpdateOffsiteBytes(this.customerGuid, inPath);
-               
-                Thread.Sleep(1 * 60 * 60 * 1000 * RunTimeSettings.PollBaseTime);
-            }
-            
+
+            Utils.UpdateOffsiteBytes(this.customerGuid, inPath);
+
+            //Thread.Sleep(1 * 60 * 60 * 1000 * RunTimeSettings.PollBaseTime);
+
         }
 
 

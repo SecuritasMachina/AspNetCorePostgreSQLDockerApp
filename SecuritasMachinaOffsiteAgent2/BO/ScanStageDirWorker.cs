@@ -22,7 +22,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         BlobServiceClient? blobServiceClient = null;
         BlobContainerClient stagingContainerClient = null;
-        public async Task<object> StartAsync()
+        public void StartAsync()
         {
 
 
@@ -32,12 +32,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
             if (stagingContainerClient == null)
                 stagingContainerClient = blobServiceClient.GetBlobContainerClient(RunTimeSettings.azureBlobContainerName);
 
-            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Starting Staging scanner worker for {RunTimeSettings.azureBlobContainerName}");
+            
 
-            while (true)
-            {
+   
                 HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "TRACE", $"Scanning Azure Blob ContainerName:{RunTimeSettings.azureBlobContainerName}");
-                DirListingDTO stagingContainerDirListingDTO1 = await Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync());
+                DirListingDTO stagingContainerDirListingDTO1 =  Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync()).Result;
                 foreach (FileDTO fileDTO in stagingContainerDirListingDTO1.fileDTOs)
                 {
 
@@ -52,8 +51,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
 
                 //ServiceBusUtils.postMsg2ControllerAsync("agent/status", RunTimeSettings.topicCustomerGuid, "status", JsonConvert.SerializeObject(statusDTO));
-                Thread.Sleep(1 * 60 * 1000 * RunTimeSettings.PollBaseTime);
-            }
+              
 
         }
 
