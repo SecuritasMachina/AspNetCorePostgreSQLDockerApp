@@ -1,31 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-
-using Azure.Messaging.ServiceBus;
+﻿using Azure.Messaging.ServiceBus;
 using Azure.Storage.Blobs;
 using Newtonsoft.Json;
-using Google.Apis.Storage.v1.Data;
-using Google.Cloud.Storage.V1;
-using System.Security.Cryptography;
 
 using System.Runtime.InteropServices;
 using Azure.Storage.Blobs.Models;
 using Common.Statics;
 using Common.Utils.Comm;
 using Common.DTO.V2;
-using SecuritasMachinaOffsiteAgent.DTO.V2;
-using System.Net;
-using System.Security.Cryptography.X509Certificates;
-using System.Net.Security;
-using System.Timers;
 using Timer = System.Timers.Timer;
 using Object = System.Object;
 
@@ -57,8 +38,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 RunTimeSettings.RetentionDays = 45;
 
             }
-
-            RunTimeSettings.topicCustomerGuid = Environment.GetEnvironmentVariable("customerGuid");
+            RunTimeSettings.topicCustomerGuid = Environment.GetEnvironmentVariable("customerAgentAuthKey");
+            //RunTimeSettings.topicCustomerGuid = Environment.GetEnvironmentVariable("customerAgentAuthKey");
             RunTimeSettings.azureBlobEndpoint = Environment.GetEnvironmentVariable("azureBlobEndpoint");
             RunTimeSettings.envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
             RunTimeSettings.azureBlobContainerName = Environment.GetEnvironmentVariable("azureBlobContainerName");
@@ -70,7 +51,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             Console.WriteLine("Starting ListenerWorker azureBlobEndpoint:" + RunTimeSettings.azureBlobEndpoint);
             Console.WriteLine("azureBlobContainerName:" + RunTimeSettings.azureBlobContainerName);
             Console.WriteLine("azureBlobRestoreContainerName:" + RunTimeSettings.azureBlobRestoreContainerName);
-            Console.WriteLine("customerGuid:" + RunTimeSettings.topicCustomerGuid);
+            Console.WriteLine("customer authkey:" + RunTimeSettings.topicCustomerGuid);
             Console.WriteLine("RetentionDays:" + RunTimeSettings.RetentionDays);
 
 
