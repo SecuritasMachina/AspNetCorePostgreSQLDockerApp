@@ -41,7 +41,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         public async Task<object> StartAsync()
         {
-            HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Starting BackupWorker worker for {backupName}");
+            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Starting BackupWorker worker for {backupName}");
            // Console.WriteLine("Starting BackupWorker for " + backupName);
             
             // Create a BlobServiceClient object which will be used to create a container client

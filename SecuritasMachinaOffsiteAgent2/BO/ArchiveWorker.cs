@@ -46,7 +46,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 }
                 if (filesDeleted)
-                    Utils.UpdateOffsiteBytes(RunTimeSettings.topicCustomerGuid, RunTimeSettings.mountedDir);
+                    Utils.UpdateOffsiteBytes(RunTimeSettings.customerAuthKey, RunTimeSettings.mountedDir);
             }
             catch (Exception ex)
             {

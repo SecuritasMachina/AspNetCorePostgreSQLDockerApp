@@ -34,7 +34,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             if (stagingContainerClient == null)
                 stagingContainerClient = blobServiceClient.GetBlobContainerClient(RunTimeSettings.azureBlobContainerName);
 
-            DirListingDTO agentDirList = Utils.doDirListing(RunTimeSettings.topicCustomerGuid, RunTimeSettings.mountedDir);
+            DirListingDTO agentDirList = Utils.doDirListing(RunTimeSettings.customerAuthKey, RunTimeSettings.mountedDir);
 
             DirListingDTO stagingContainerDirListingDTO1 =  Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync()).Result;
 
@@ -56,7 +56,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             statusDTO.RestoredListingDTO = restoredListingDTO.fileDTOs;
 
 
-            ServiceBusUtils.postMsg2ControllerAsync("agent/status", RunTimeSettings.topicCustomerGuid, "status", JsonConvert.SerializeObject(statusDTO));
+            ServiceBusUtils.postMsg2ControllerAsync("agent/status", RunTimeSettings.customerAuthKey, "status", JsonConvert.SerializeObject(statusDTO));
             // Thread.Sleep(1 * 60 * 1000 * RunTimeSettings.PollBaseTime);
 
 

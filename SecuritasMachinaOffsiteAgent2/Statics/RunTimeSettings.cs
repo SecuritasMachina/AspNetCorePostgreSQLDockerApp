@@ -13,7 +13,7 @@ namespace Common.Statics
         public static string? SBConnectionString = "";
        // public static string? topicNamecustomerGuid;
         public static string? passPhrase;
-        public static string? topicCustomerGuid;
+        public static string? customerAuthKey;
         public static string? authKey;
         public static string? clientSubscriptionName;
         public static string? controllerTopicName;
@@ -25,6 +25,7 @@ namespace Common.Statics
         internal static string? azureBlobContainerName;
         internal static string? azureBlobRestoreContainerName;
         internal static int RetentionDays;
+        internal static string serviceBusTopic;
 
         public static string WebListenerURL
         {

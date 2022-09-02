@@ -35,18 +35,18 @@ namespace SecuritasMachinaOffsiteAgent.BO
             
 
    
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "TRACE", $"Scanning Azure Blob ContainerName:{RunTimeSettings.azureBlobContainerName}");
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "TRACE", $"Scanning Azure Blob ContainerName:{RunTimeSettings.azureBlobContainerName}");
                 DirListingDTO stagingContainerDirListingDTO1 =  Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync()).Result;
                 foreach (FileDTO fileDTO in stagingContainerDirListingDTO1.fileDTOs)
                 {
 
-                    HTTPUtils.Instance.writeToLog(RunTimeSettings.topicCustomerGuid, "INFO", $"Queuing {fileDTO.FileName}");
+                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Queuing {fileDTO.FileName}");
                     // spawn workers for files
-                    BackupWorker backupWorker = new BackupWorker(RunTimeSettings.topicCustomerGuid, RunTimeSettings.azureBlobEndpoint, RunTimeSettings.azureBlobContainerName, fileDTO.FileName, RunTimeSettings.envPassPhrase);
+                    BackupWorker backupWorker = new BackupWorker(RunTimeSettings.customerAuthKey, RunTimeSettings.azureBlobEndpoint, RunTimeSettings.azureBlobContainerName, fileDTO.FileName, RunTimeSettings.envPassPhrase);
                     ThreadUtils.addToQueue(backupWorker);
                 }
                 if (ThreadUtils.getActiveThreads() > 0)
-                    Utils.UpdateOffsiteBytes(RunTimeSettings.topicCustomerGuid, RunTimeSettings.mountedDir);
+                    Utils.UpdateOffsiteBytes(RunTimeSettings.customerAuthKey, RunTimeSettings.mountedDir);
 
 
 

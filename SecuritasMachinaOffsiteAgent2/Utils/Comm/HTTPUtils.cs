@@ -53,7 +53,8 @@ namespace Common.Utils.Comm
                 try
                 {
                     RunTimeSettings.AppVersion = VersionUtil.getAppVersion();
-                    string url = "api/v3/config/" + Uri.EscapeDataString(RunTimeSettings.AppVersion) + "/" + pcustomerGuid ;
+                    string url = "api/v3/config/" + Uri.EscapeDataString(RunTimeSettings.AppVersion)  ;
+                    _client.DefaultRequestHeaders.Add("AuthToken", pcustomerGuid);
                     HttpResponseMessage response = _client.GetAsync(url).Result;
                     response.EnsureSuccessStatusCode();
                     string result = response.Content.ReadAsStringAsync().Result;
@@ -61,9 +62,10 @@ namespace Common.Utils.Comm
                     
                     RunTimeSettings.SBConnectionString = stuff.serviceBusEndPoint;
                     RunTimeSettings.sbrootConnectionString = stuff.sbrootConnectionString;
+
                     //RunTimeSettings.topicNamecustomerGuid = stuff.topicName;
                     //RunTimeSettings.topicCustomerGuid = pcustomerGuid;
-                    RunTimeSettings.authKey = stuff.authKey;
+                    RunTimeSettings.serviceBusTopic = stuff.serviceBusTopic;
                     RunTimeSettings.PollBaseTime = stuff.PollBaseTime == null ? (int)1 : (int)stuff.PollBaseTime;
                     RunTimeSettings.clientSubscriptionName = stuff.clientSubscriptionName;
                     break;
@@ -85,7 +87,7 @@ namespace Common.Utils.Comm
             request.ContentType = "application/json";
             request.Accept = "application/json";
             request.ContentLength = serializedJson.Length;
-            request.Headers.Add("AuthKey", RunTimeSettings.authKey);
+            request.Headers.Add("AuthToken", RunTimeSettings.authKey);
             using (Stream webStream = request.GetRequestStream())
             using (StreamWriter requestWriter = new StreamWriter(webStream, System.Text.Encoding.ASCII))
             {
@@ -120,7 +122,7 @@ namespace Common.Utils.Comm
             {
                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);Uri
                 request.AutomaticDecompression = DecompressionMethods.GZip;
-                request.Headers.Add("AuthKey", RunTimeSettings.authKey);
+                request.Headers.Add("AuthToken", RunTimeSettings.authKey);
                 using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
                 using (Stream stream = response.GetResponseStream())
                 using (StreamReader reader = new StreamReader(stream))
@@ -144,7 +146,7 @@ namespace Common.Utils.Comm
             backupHistoryDTO.fileLength = fileLength;
             backupHistoryDTO.newFileName=newFileName;
             backupHistoryDTO.startTimeStamp=startTimeStamp;
-            ServiceBusUtils.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.topicCustomerGuid, "writeBackupHistory", JsonConvert.SerializeObject(backupHistoryDTO));
+            ServiceBusUtils.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAuthKey, "writeBackupHistory", JsonConvert.SerializeObject(backupHistoryDTO));
         }
         public void putCache(string topiccustomerGuid, string messageType, string json)
         {
@@ -157,7 +159,7 @@ namespace Common.Utils.Comm
                 request.ContentType = "application/json";
                 request.Accept = "application/json";
                 request.ContentLength = json.Length;
-                request.Headers.Add("AuthKey", RunTimeSettings.authKey);
+                request.Headers.Add("AuthToken", RunTimeSettings.authKey);
 
                 using (Stream webStream = request.GetRequestStream())
                 using (StreamWriter requestWriter = new StreamWriter(webStream, System.Text.Encoding.ASCII))
