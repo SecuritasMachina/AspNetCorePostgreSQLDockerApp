@@ -44,7 +44,7 @@ namespace Common.Utils.Comm
             }
             _client.BaseAddress = new Uri(RunTimeSettings.WebListenerURL);
         }
-        public void populateRuntime(string pcustomerGuid)
+        public void populateRuntime(string pAuthToken)
         {
             long loopCount = 0;
             while (loopCount < 100)
@@ -54,7 +54,7 @@ namespace Common.Utils.Comm
                 {
                     RunTimeSettings.AppVersion = VersionUtil.getAppVersion();
                     string url = "api/v3/config/" + Uri.EscapeDataString(RunTimeSettings.AppVersion)  ;
-                    _client.DefaultRequestHeaders.Add("AuthToken", pcustomerGuid);
+                    _client.DefaultRequestHeaders.Add("AuthToken", pAuthToken);
                     HttpResponseMessage response = _client.GetAsync(url).Result;
                     response.EnsureSuccessStatusCode();
                     string result = response.Content.ReadAsStringAsync().Result;
@@ -150,39 +150,7 @@ namespace Common.Utils.Comm
         }
         public void putCache(string topiccustomerGuid, string messageType, string json)
         {
-            //Console.Out.WriteLine("putCache:" + " messageType:" + messageType + " json:" + jseon);
-            /*try
-            {
-                string payload = Uri.EscapeUriString(messageType);
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "api/v3/putCache/" + payload);
-                request.Method = "POST";
-                request.ContentType = "application/json";
-                request.Accept = "application/json";
-                request.ContentLength = json.Length;
-                request.Headers.Add("AuthToken", RunTimeSettings.authKey);
-
-                using (Stream webStream = request.GetRequestStream())
-                using (StreamWriter requestWriter = new StreamWriter(webStream, System.Text.Encoding.ASCII))
-                {
-                    requestWriter.Write(json);
-                }
-
-
-                WebResponse webResponse = request.GetResponse();
-                using (Stream webStream = webResponse.GetResponseStream() ?? Stream.Null)
-                using (StreamReader responseReader = new StreamReader(webStream))
-                {
-                    string response = responseReader.ReadToEnd();
-                    Console.Out.WriteLine(response);
-                }
-            }
-            catch (Exception e)
-            {
-                Console.Out.WriteLine("-----------------");
-                Console.Out.WriteLine(e.Message);
-                writeToLog(topiccustomerGuid, "ERROR", e.ToString() + "Parameters: " + $"{topiccustomerGuid},  {messageType},  {json}");
-            }
-            */
+           
             ServiceBusUtils.postMsg2ControllerAsync("agent/putCache", topiccustomerGuid, messageType, json);
         }
 

@@ -10,11 +10,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
         private int retentionDays;
 
         private string inPath;
-        private string customerGuid;
+        private string authtoken;
 
-        public ArchiveWorker(string customerGuid, string inPath, int retentionDays)
+        public ArchiveWorker(string pAuthkey, string inPath, int retentionDays)
         {
-            this.customerGuid = customerGuid;
+            this.authtoken = pAuthkey;
             this.inPath = inPath;
             this.retentionDays = retentionDays;
 
@@ -28,7 +28,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             DateTime purgeOlderDate = DateTime.Now.AddDays(retentionDays * -1);
 
-            HTTPUtils.Instance.writeToLog(this.customerGuid, "INFO", $"Scanning {inPath} for Last Write Time over {retentionDays} old ({purgeOlderDate.ToShortDateString()})");
+            HTTPUtils.Instance.writeToLog(this.authtoken, "INFO", $"Scanning {inPath} for Last Write Time over {retentionDays} old ({purgeOlderDate.ToShortDateString()})");
             DirectoryInfo directoryInfo = new DirectoryInfo(inPath);
             List<FileInfo> Files2 = directoryInfo.GetFiles("*").ToList();
 
@@ -40,7 +40,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     if (file.LastWriteTime < purgeOlderDate)
                     {
                         file.Delete();
-                        HTTPUtils.Instance.writeToLog(this.customerGuid, "DELETING", file.Name);
+                        HTTPUtils.Instance.writeToLog(this.authtoken, "DELETING", file.Name);
                         filesDeleted = true;
                     }
 
@@ -50,7 +50,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(this.customerGuid, "ERROR", inPath + " ArchiveWorker: " + ex.ToString());
+                HTTPUtils.Instance.writeToLog(this.authtoken, "ERROR", inPath + " ArchiveWorker: " + ex.ToString());
 
             }
             Thread.Sleep(6 * 60 * 60 * 1000 * RunTimeSettings.PollBaseTime);

@@ -116,17 +116,17 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     int percentComplete = (int)Math.Round((double)(100 * lengthRead) / (double)pContentLength);
                     if (pContentLength > 1024 * 1024 * 10)
                     {
-                        if (percentComplete > 25 && !wrote25)
+                        if (percentComplete >= 25 && !wrote25)
                         {
                             HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pBaseFileName} is {percentComplete}% complete");
                             wrote25 = true;
                         }
-                        if (percentComplete > 50 && !wrote50)
+                        if (percentComplete >= 50 && !wrote50)
                         {
                             HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pBaseFileName} is {percentComplete}% complete");
                             wrote50 = true;
                         }
-                        if (percentComplete > 75 && !wrote75)
+                        if (percentComplete >= 75 && !wrote75)
                         {
                             HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pBaseFileName} is {percentComplete}% complete");
                             wrote75 = true;
@@ -212,17 +212,17 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     int percentComplete = (int)Math.Round((double)(100 * lengthRead) / (double)pContentLength);
                     if (pContentLength > 1024 * 1024 * 10)
                     {
-                        if (percentComplete > 25 && !wrote25)
+                        if (percentComplete >= 25 && !wrote25)
                         {
                             HTTPUtils.Instance.writeToLog(topiccustomerGuid, "RESTORE-UPDATE", $"Restoring {pInfileName} is {percentComplete}% complete");
                             wrote25 = true;
                         }
-                        if (percentComplete > 50 && !wrote50)
+                        if (percentComplete >= 50 && !wrote50)
                         {
                             HTTPUtils.Instance.writeToLog(topiccustomerGuid, "RESTORE-UPDATE", $"Restoring {pInfileName} is {percentComplete}% complete");
                             wrote50 = true;
                         }
-                        if (percentComplete > 75 && !wrote75)
+                        if (percentComplete >= 75 && !wrote75)
                         {
                             HTTPUtils.Instance.writeToLog(topiccustomerGuid, "RESTORE-UPDATE", $"Restoring {pInfileName} is {percentComplete}% complete");
                             wrote75 = true;
