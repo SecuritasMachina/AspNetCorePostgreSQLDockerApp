@@ -39,6 +39,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             }
             RunTimeSettings.customerAuthKey = Environment.GetEnvironmentVariable("customerAgentAuthKey");
+            RunTimeSettings.GoogleStorageBucketName= Environment.GetEnvironmentVariable("GoogleStorageBucketName");
             //RunTimeSettings.topicCustomerGuid = Environment.GetEnvironmentVariable("customerAgentAuthKey");
             RunTimeSettings.azureBlobEndpoint = Environment.GetEnvironmentVariable("azureBlobEndpoint");
             RunTimeSettings.envPassPhrase = Environment.GetEnvironmentVariable("passPhrase");
@@ -51,6 +52,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             Console.WriteLine("Starting ListenerWorker azureBlobEndpoint:" + RunTimeSettings.azureBlobEndpoint);
             Console.WriteLine("AzureBlobContainerName:" + RunTimeSettings.azureBlobContainerName);
             Console.WriteLine("AzureBlobRestoreContainerName:" + RunTimeSettings.azureBlobRestoreContainerName);
+            Console.WriteLine("GoogleStorageBucketName:" + RunTimeSettings.GoogleStorageBucketName);
             Console.WriteLine("Customer authkey:" + RunTimeSettings.customerAuthKey);
             Console.WriteLine("RetentionDays:" + RunTimeSettings.RetentionDays);
 

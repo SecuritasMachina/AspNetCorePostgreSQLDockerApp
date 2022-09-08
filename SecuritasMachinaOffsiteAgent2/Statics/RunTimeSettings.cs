@@ -25,7 +25,8 @@ namespace Common.Statics
         internal static string? azureBlobContainerName;
         internal static string? azureBlobRestoreContainerName;
         internal static int RetentionDays;
-        internal static string serviceBusTopic;
+        internal static string? serviceBusTopic;
+        internal static string? GoogleStorageBucketName;
 
         public static string WebListenerURL
         {
