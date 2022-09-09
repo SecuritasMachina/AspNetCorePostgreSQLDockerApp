@@ -39,6 +39,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             DirListingDTO stagingContainerDirListingDTO1 = Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync()).Result;
             foreach (FileDTO fileDTO in stagingContainerDirListingDTO1.fileDTOs)
             {
+                Thread.Sleep(new Random().Next(250)+(1*1000));
                 if (!ThreadUtils.isInQueue(fileDTO.FileName))
                 {
                     HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Queuing {fileDTO.FileName}");
