@@ -2,6 +2,8 @@
 using Azure.Storage.Blobs.Models;
 using Common.DTO.V2;
 using Common.Utils.Comm;
+using Google.Apis.Download;
+using Google.Apis.Upload;
 using Google.Cloud.Storage.V1;
 using Newtonsoft.Json;
 using SecuritasMachinaOffsiteAgent.DTO.V2;
@@ -21,7 +23,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
     {
         public static String BytesToString(long byteCount)
         {
-            string[] suf = { "B", "KB", "MB", "GB", "TB", "PB", "EB" }; //Longs run out around EB
+            string[] suf = { "B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB" }; //Longs run out around EB
             if (byteCount == 0)
                 return "0" + suf[0];
             long bytes = Math.Abs(byteCount);
@@ -140,7 +142,21 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         UploadObjectOptions uploadObjectOptions = new UploadObjectOptions();
                         EncryptionKey encryptionKey = EncryptionKey.Create(Encoding.UTF8.GetBytes(password));
                         uploadObjectOptions.EncryptionKey = encryptionKey;
-                        googleClient.UploadObject(googleStorageBucketName, pOutputFileName, pContentType, pInStream, uploadObjectOptions);
+                        DateTime start = DateTime.Now;
+                        var progress = new Progress<IUploadProgress>(
+                             p =>
+                             {
+                                 DateTime end = DateTime.Now;
+                                 var result = end.Subtract(start).TotalMinutes;
+                                 if (result > 1)
+                                 {
+                                     int percentComplete = (int)Math.Round((double)(100 * p.BytesSent) / (double)pContentLength);
+                                     HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pBaseFileName} is {percentComplete}% complete");
+                                     start = DateTime.Now;
+                                 }
+                             }
+                        );
+                        googleClient.UploadObject(googleStorageBucketName, pOutputFileName, pContentType, pInStream, uploadObjectOptions, progress);
 
 
                     }
@@ -171,18 +187,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
 
         }
-        public void AES_DecryptStream(string topiccustomerGuid, string pGoogleBucketName, string pFileToRestore, Stream pOutStream, long pContentLength, string pInfileName, string password)
+        public void AES_DecryptStream(string pCustomerGuid, string pGoogleBucketName, string pFileToRestore, Stream pOutStream, long pContentLength, string pInfileName, string password)
         {
-            //todo:
-            // - create error message on wrong password
-            // - on cancel: close and delete file
-            // - on wrong password: close and delete file!
-            // - create a better filen name
-            // - could be check md5 hash on the files but it make this slow
 
-
-            // Create an Aes object
-            // with the specified key and IV.
             using (Aes aesAlg = Aes.Create())
             {
                 //byte[] passwordBytes = Encoding.UTF8.GetBytes(password);
@@ -199,97 +206,30 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 DownloadObjectOptions downloadObjectOptions = new DownloadObjectOptions();
                 EncryptionKey encryptionKey = EncryptionKey.Create(Encoding.UTF8.GetBytes(password));
                 downloadObjectOptions.EncryptionKey = encryptionKey;
-                googleClient.DownloadObject(pGoogleBucketName, pFileToRestore, pOutStream, downloadObjectOptions);
+                DateTime start = DateTime.Now;
+                var progress = new Progress<IDownloadProgress>(
+                   p =>
+                   {
+                       DateTime end = DateTime.Now;
+                       var result = end.Subtract(start).TotalMinutes;
+                       if (result > 1)
+                       {
+                           int percentComplete = (int)Math.Round((double)(100 * p.BytesDownloaded) / (double)pContentLength);
+                           HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pFileToRestore} is {percentComplete}% complete");
+                           start = DateTime.Now;
+                       }
+                   }
+                );
 
-                //byte[] passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
-                //byte[] salt = new byte[32];
+                googleClient.DownloadObject(pGoogleBucketName, pFileToRestore, pOutStream, downloadObjectOptions, progress);
 
-                ////FileStream fsCrypt = new FileStream(inputFile, FileMode.Open);
-                //fsCrypt.Read(salt, 0, salt.Length);
-
-                //RijndaelManaged AES = new RijndaelManaged();
-                //AES.KeySize = 256;
-                //AES.BlockSize = 128;
-                //var key = new Rfc2898DeriveBytes(passwordBytes, salt, 50000);
-                //AES.Key = key.GetBytes(AES.KeySize / 8);
-                //AES.IV = key.GetBytes(AES.BlockSize / 8);
-                //AES.Padding = PaddingMode.PKCS7;
-                //AES.Mode = CipherMode.CBC;// .CFB;
-
-                //CryptoStream cs = new CryptoStream(fsCrypt, AES.CreateDecryptor(), CryptoStreamMode.Read);
-
-                ////FileStream fsOut = new FileStream(inputFile + ".decrypted", FileMode.Create);
-
-                //int read;
-                //byte[] buffer = new byte[1048576];
-                //long lengthRead = 0;
-                //bool wrote25 = false;
-                //bool wrote50 = false;
-                //bool wrote75 = false;
-                //try
-                //{
-                //    long tGB = 0;
-                //    while ((read = cs.Read(buffer, 0, buffer.Length)) > 0)
-                //    {
-                //        //Application.DoEvents();
-                //        tGB++;
-                //        pOutStream.Write(buffer, 0, read);
-                //        lengthRead += read;
-
-                //        int percentComplete = (int)Math.Round((double)(100 * lengthRead) / (double)pContentLength);
-                //        if (pContentLength > 1024 * 1024 * 10)
-                //        {
-                //            if (percentComplete >= 25 && !wrote25)
-                //            {
-                //                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "RESTORE-UPDATE", $"Restoring {pInfileName} is {percentComplete}% complete");
-                //                wrote25 = true;
-                //            }
-                //            if (percentComplete >= 50 && !wrote50)
-                //            {
-                //                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "RESTORE-UPDATE", $"Restoring {pInfileName} is {percentComplete}% complete");
-                //                wrote50 = true;
-                //            }
-                //            if (percentComplete >= 75 && !wrote75)
-                //            {
-                //                HTTPUtils.Instance.writeToLog(topiccustomerGuid, "RESTORE-UPDATE", $"Restoring {pInfileName} is {percentComplete}% complete");
-                //                wrote75 = true;
-                //            }
-                //        }
-                //        //HTTPUtils.Instance.writeToLog(topiccustomerGuid, "TRACE", $"...Decypted {tGB} GB of {pInfileName}");
-                //    }
-                //}
-                //catch (CryptographicException ex_CryptographicException)
-                //{
-                //    Debug.WriteLine("CryptographicException error: " + ex_CryptographicException.Message);
-                //    HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", $"...Error on {pInfileName} AES Decypt {ex_CryptographicException.Message.ToString()}, check passphrase");
-                //    throw (ex_CryptographicException);
-                //}
-                //catch (Exception ex)
-                //{
-                //    HTTPUtils.Instance.writeToLog(topiccustomerGuid, "ERROR", $"...Error on {pInfileName} AES Decypt {ex.Message.ToString()}");
-                //    throw (ex);
-                //}
-
-                //try
-                //{
-                //    cs.Close();
-                //}
-                //catch (Exception ex)
-                //{
-                //    Debug.WriteLine("Error by closing CryptoStream: " + ex.Message);
-                //}
-                //finally
-                //{
-                //    pOutStream.Close();
-                //    fsCrypt.Close();
-                //}
             }
         }
-        
+
 
         internal static void UpdateOffsiteBytes(string customerGuid, string pGoogleBucketName)
         {
-            HTTPUtils.Instance.writeToLog(customerGuid, "TRACE", $"Scanning Bucket {pGoogleBucketName}");
+            HTTPUtils.Instance.writeToLog(customerGuid, "TRACE", $"Scanning Google Storage Bucket {pGoogleBucketName}");
             DirListingDTO dirlistingDTO = CloudUtils.Instance.listFiles(pGoogleBucketName);
 
             long? tsize = 0;

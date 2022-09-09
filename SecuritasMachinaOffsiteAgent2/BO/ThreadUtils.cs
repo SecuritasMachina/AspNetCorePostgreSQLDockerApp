@@ -39,9 +39,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             else
             {
-                while (getActiveThreads() >= RunTimeSettings.MaxThreads)
+                DateTime start = DateTime.Now;
+                TimeSpan timeDiff = DateTime.Now - start;
+                while (getActiveThreads() >= RunTimeSettings.MaxThreads && timeDiff.Hours < 1)
                 {
                     Thread.Sleep(5 * 1000);
+                    timeDiff = DateTime.Now - start;
+
                 }
                 string backWorkerName = backupWorker.ToString();
                 if (!dt.ContainsKey(backWorkerName))

@@ -53,13 +53,13 @@ namespace Common.Utils.Comm
                 try
                 {
                     RunTimeSettings.AppVersion = VersionUtil.getAppVersion();
-                    string url = "api/v3/config/" + Uri.EscapeDataString(RunTimeSettings.AppVersion)  ;
+                    string url = "api/v3/config/" + Uri.EscapeDataString(RunTimeSettings.AppVersion);
                     _client.DefaultRequestHeaders.Add("AuthToken", pAuthToken);
                     HttpResponseMessage response = _client.GetAsync(url).Result;
                     response.EnsureSuccessStatusCode();
                     string result = response.Content.ReadAsStringAsync().Result;
                     dynamic stuff = JsonConvert.DeserializeObject(result);
-                    
+
                     RunTimeSettings.SBConnectionString = stuff.serviceBusEndPoint;
                     RunTimeSettings.sbrootConnectionString = stuff.sbrootConnectionString;
 
@@ -68,11 +68,24 @@ namespace Common.Utils.Comm
                     RunTimeSettings.serviceBusTopic = stuff.serviceBusTopic;
                     RunTimeSettings.PollBaseTime = stuff.PollBaseTime == null ? (int)1 : (int)stuff.PollBaseTime;
                     RunTimeSettings.clientSubscriptionName = stuff.clientSubscriptionName;
+                    if (RunTimeSettings.envPassPhrase == null && RunTimeSettings.googleStorageBucketName == null)
+                    {
+                        RunTimeSettings.azureBlobEndpoint = stuff.azureBlobEndpoint;
+                        RunTimeSettings.azureSourceBlobContainerName = stuff.azureSourceBlobContainerName;
+                        RunTimeSettings.azureBlobRestoreContainerName = stuff.azureBlobRestoreContainerName;
+                        RunTimeSettings.googleStorageBucketName = stuff.googleStorageBucketName;
+                        RunTimeSettings.encryptionPassPhrase = stuff.encryptionPassPhrase;
+                        RunTimeSettings.RetentionDays = stuff.retentionDays == null ? (int)45 : (int)stuff.retentionDays;
+                        RunTimeSettings.MaxThreads = stuff.maxThreads == null ? (int)5 : (int)stuff.maxThreads;
+
+                    }
                     break;
                 }
-                catch (Exception ex) {
-                    Console.Out.WriteLine($"Error connecting to Node, Attempt #{loopCount} OF 100, retrying.."+ex.ToString() );
-                    Thread.Sleep(30 * 1000); }
+                catch (Exception ex)
+                {
+                    Console.Out.WriteLine($"Error connecting to Node, Attempt #{loopCount} OF 100, retrying.." + ex.ToString());
+                    Thread.Sleep(30 * 1000);
+                }
             }
         }
 
@@ -117,44 +130,44 @@ namespace Common.Utils.Comm
 
             //string serializedJson = JsonConvert.SerializeObject(json);
             //Debug.WriteLine($"writeToLog: guid:{guid} backupFile:{backupFile} json:{json}");
-           /* string url = RunTimeSettings.WebListenerURL + "api/v3/postBackupHistory/" + RunTimeSettings.topicCustomerGuid + "/" + Uri.EscapeUriString(backupFile) + "/" + Uri.EscapeUriString(newFileName) + "/" + fileLength + "/" + startTimeStamp;
-            try
-            {
-                HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);Uri
-                request.AutomaticDecompression = DecompressionMethods.GZip;
-                request.Headers.Add("AuthToken", RunTimeSettings.authKey);
-                using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-                using (Stream stream = response.GetResponseStream())
-                using (StreamReader reader = new StreamReader(stream))
-                {
-                    string html = reader.ReadToEnd();
-                    //Console.Out.WriteLine(html);
-                }
+            /* string url = RunTimeSettings.WebListenerURL + "api/v3/postBackupHistory/" + RunTimeSettings.topicCustomerGuid + "/" + Uri.EscapeUriString(backupFile) + "/" + Uri.EscapeUriString(newFileName) + "/" + fileLength + "/" + startTimeStamp;
+             try
+             {
+                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);Uri
+                 request.AutomaticDecompression = DecompressionMethods.GZip;
+                 request.Headers.Add("AuthToken", RunTimeSettings.authKey);
+                 using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                 using (Stream stream = response.GetResponseStream())
+                 using (StreamReader reader = new StreamReader(stream))
+                 {
+                     string html = reader.ReadToEnd();
+                     //Console.Out.WriteLine(html);
+                 }
 
-            }
-            catch (Exception e)
-            {
-                Console.Out.WriteLine("-----------------");
-                Console.Out.WriteLine(e.Message);
-                writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", e.ToString());
-                //HTTPUtils.instance.writeToLog(guid, "ERROR", e.ToString());
-            }
-           */
+             }
+             catch (Exception e)
+             {
+                 Console.Out.WriteLine("-----------------");
+                 Console.Out.WriteLine(e.Message);
+                 writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", e.ToString());
+                 //HTTPUtils.instance.writeToLog(guid, "ERROR", e.ToString());
+             }
+            */
             BackupHistoryDTO backupHistoryDTO = new BackupHistoryDTO();
             backupHistoryDTO.startTimeStamp = startTimeStamp;
             backupHistoryDTO.backupFile = backupFile;
             backupHistoryDTO.fileLength = fileLength;
-            backupHistoryDTO.newFileName=newFileName;
-            backupHistoryDTO.startTimeStamp=startTimeStamp;
+            backupHistoryDTO.newFileName = newFileName;
+            backupHistoryDTO.startTimeStamp = startTimeStamp;
             ServiceBusUtils.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAuthKey, "writeBackupHistory", JsonConvert.SerializeObject(backupHistoryDTO));
         }
         public void putCache(string topiccustomerGuid, string messageType, string json)
         {
-           
+
             ServiceBusUtils.postMsg2ControllerAsync("agent/putCache", topiccustomerGuid, messageType, json);
         }
 
-        
+
     }
 }
 

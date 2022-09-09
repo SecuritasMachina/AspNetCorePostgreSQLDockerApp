@@ -25,9 +25,12 @@ namespace Common.Statics
         internal static string? azureSourceBlobContainerName;
         internal static string? azureBlobRestoreContainerName;
         internal static int RetentionDays;
+        
         internal static string? serviceBusTopic;
         internal static string? GoogleStorageBucketName;
         internal static int MaxThreads;
+        
+        internal static string? encryptionPassPhrase;
 
         public static string WebListenerURL
         {
@@ -45,5 +48,8 @@ namespace Common.Statics
             }
             set { WebListenerURL = value; }
         }
+
+        public static string googleStorageBucketName { get; internal set; }
+       
     }
 }

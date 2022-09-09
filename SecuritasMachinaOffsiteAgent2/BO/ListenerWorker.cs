@@ -77,13 +77,17 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 if (RunTimeSettings.envPassPhrase.Length < 32)
                 {
                     RunTimeSettings.envPassPhrase = RunTimeSettings.envPassPhrase.PadRight(32, 'P');
-                    Console.WriteLine("Warning, passphrase was under 32 characters long, right padding");
+                    Console.WriteLine("Warning, encryption passphrase was under 32 characters long, right padding");
                 }
-                Console.WriteLine("passPhrase Length:" + RunTimeSettings.envPassPhrase.Length);
+                Console.WriteLine("encryptionPassPhrase Length:" + RunTimeSettings.envPassPhrase.Length);
+            }
+            else
+            {
+                Console.WriteLine("encryptionPassPhrase is Empty");
             }
 
             HTTPUtils.Instance.populateRuntime(RunTimeSettings.customerAuthKey);
-            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "CONFIGINFO", $"azureBlobEndpoint length: {RunTimeSettings.azureBlobEndpoint.Length} azureBlobContainerName:{RunTimeSettings.azureSourceBlobContainerName} azureBlobRestoreContainerName:{RunTimeSettings.azureBlobRestoreContainerName} RetentionDays:{RunTimeSettings.RetentionDays} passPhrase Length: {RunTimeSettings.envPassPhrase.Length}");
+            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "CONFIGINFO", $"azureBlobEndpoint length: {RunTimeSettings.azureBlobEndpoint.Length} azureBlobContainerName:{RunTimeSettings.azureSourceBlobContainerName} azureBlobRestoreContainerName:{RunTimeSettings.azureBlobRestoreContainerName} GoogleStorageBucketName: {RunTimeSettings.GoogleStorageBucketName} RetentionDays:{RunTimeSettings.RetentionDays} MaxThreads: {RunTimeSettings.MaxThreads} encryptionPassPhrase Length: {RunTimeSettings.envPassPhrase.Length}");
             if (RunTimeSettings.SBConnectionString == null || RunTimeSettings.SBConnectionString.Length == 0)
             {
                 Console.WriteLine("!!! Unable to retrieve configuration !!!");
