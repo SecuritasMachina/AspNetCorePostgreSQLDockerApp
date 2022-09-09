@@ -30,28 +30,30 @@ namespace SecuritasMachinaOffsiteAgent.BO
             if (blobServiceClient == null)
                 blobServiceClient = new BlobServiceClient(RunTimeSettings.azureBlobEndpoint);
             if (stagingContainerClient == null)
-                stagingContainerClient = blobServiceClient.GetBlobContainerClient(RunTimeSettings.azureBlobContainerName);
+                stagingContainerClient = blobServiceClient.GetBlobContainerClient(RunTimeSettings.azureSourceBlobContainerName);
 
-            
 
-   
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "TRACE", $"Scanning Azure Blob ContainerName:{RunTimeSettings.azureBlobContainerName}");
-                DirListingDTO stagingContainerDirListingDTO1 =  Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync()).Result;
-                foreach (FileDTO fileDTO in stagingContainerDirListingDTO1.fileDTOs)
+
+
+            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "TRACE", $"Scanning Azure Blob ContainerName:{RunTimeSettings.azureSourceBlobContainerName}");
+            DirListingDTO stagingContainerDirListingDTO1 = Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync()).Result;
+            foreach (FileDTO fileDTO in stagingContainerDirListingDTO1.fileDTOs)
+            {
+                if (!ThreadUtils.isInQueue(fileDTO.FileName))
                 {
-
                     HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Queuing {fileDTO.FileName}");
                     // spawn workers for files
-                    BackupWorker backupWorker = new BackupWorker(RunTimeSettings.customerAuthKey, RunTimeSettings.azureBlobEndpoint, RunTimeSettings.azureBlobContainerName, fileDTO.FileName, RunTimeSettings.envPassPhrase);
+                    BackupWorker backupWorker = new BackupWorker(RunTimeSettings.customerAuthKey, RunTimeSettings.GoogleStorageBucketName, RunTimeSettings.azureBlobEndpoint, RunTimeSettings.azureSourceBlobContainerName, fileDTO.FileName, RunTimeSettings.envPassPhrase);
                     ThreadUtils.addToQueue(backupWorker);
                 }
-                if (ThreadUtils.getActiveThreads() > 0)
-                    Utils.UpdateOffsiteBytes(RunTimeSettings.customerAuthKey, RunTimeSettings.mountedDir);
+            }
+            if (ThreadUtils.getActiveThreads() > 0)
+                Utils.UpdateOffsiteBytes(RunTimeSettings.customerAuthKey, RunTimeSettings.GoogleStorageBucketName);
 
 
 
-                //ServiceBusUtils.postMsg2ControllerAsync("agent/status", RunTimeSettings.topicCustomerGuid, "status", JsonConvert.SerializeObject(statusDTO));
-              
+            //ServiceBusUtils.postMsg2ControllerAsync("agent/status", RunTimeSettings.topicCustomerGuid, "status", JsonConvert.SerializeObject(statusDTO));
+
 
         }
 

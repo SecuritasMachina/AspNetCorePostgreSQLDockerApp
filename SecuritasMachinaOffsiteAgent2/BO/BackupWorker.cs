@@ -11,114 +11,118 @@ using System.Text;
 using Common.Utils.Comm;
 using System.Web;
 using Azure.Storage.Blobs.Models;
+using Google.Cloud.Storage.V1;
+using System.Reflection.Metadata;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
     public class BackupWorker
     {
-        private string customerGuid;
-        private string azureBlobEndpoint;
-        private string BlobContainerName;
-        private string backupName;
-        private string passPhrase;
+        private string _customerGuid;
+        private string _azureBlobEndpoint;
+        private string _BlobContainerName;
+        private string _googleBucketName;
+        private string _backupName;
+        private string _passPhrase;
         //private BackgroundWorker worker;
-        
+
         public override string ToString()
         {
-            return this.backupName;
+            return this._backupName;
         }
-        public BackupWorker(string customerGuid, string azureBlobEndpoint, string BlobContainerName, string backupName, string passPhrase)
+        public BackupWorker(string customerGuid, string googleBucketName, string azureBlobEndpoint, string BlobContainerName, string backupName, string passPhrase)
         {
-            
-            this.customerGuid = customerGuid;
-            this.azureBlobEndpoint = azureBlobEndpoint;
-            this.BlobContainerName = BlobContainerName;
-            this.backupName = backupName;
-            this.passPhrase = passPhrase;
+
+            this._customerGuid = customerGuid;
+            this._azureBlobEndpoint = azureBlobEndpoint;
+            this._BlobContainerName = BlobContainerName;
+            this._googleBucketName = googleBucketName;
+            this._backupName = backupName;
+            this._passPhrase = passPhrase;
 
         }
 
 
         public async Task<object> StartAsync()
         {
-            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Starting BackupWorker worker for {backupName}");
-           // Console.WriteLine("Starting BackupWorker for " + backupName);
-            
+            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Starting BackupWorker worker for {_backupName}");
+            // Console.WriteLine("Starting BackupWorker for " + backupName);
+
             // Create a BlobServiceClient object which will be used to create a container client
             GenericMessage genericMessage = new GenericMessage();
             try
             {
 
-                BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
-                BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(BlobContainerName);
-                
-                BlobClient blobClient = containerClient.GetBlobClient(backupName);
+                BlobServiceClient blobServiceClient = new BlobServiceClient(_azureBlobEndpoint);
+                BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(_BlobContainerName);
+
+                BlobClient blobClient = containerClient.GetBlobClient(_backupName);
+                BlobProperties props = blobClient.GetProperties();
+                string contentType = props.ContentType;
                 if (!blobClient.Exists())
                 {
-                    string msg = $"{backupName} disappeared before it could be read, is there another agent running using azureBlobContainerName:{BlobContainerName}";
-                    HTTPUtils.Instance.writeToLog(this.customerGuid, "INFO",msg);
-                    
+                    string msg = $"{_backupName} disappeared before it could be read, is there another agent running using azureBlobContainerName:{_BlobContainerName}";
+                    HTTPUtils.Instance.writeToLog(this._customerGuid, "INFO", msg);
+
                     return msg;
                 }
                 BlobProperties properties = await blobClient.GetPropertiesAsync();
-
+                StorageClient googleClient = StorageClient.Create();
                 Stream inStream = blobClient.OpenRead();
 
                 //Store directly on fusepath
-                string basebackupName = backupName;
-                string outFileName = "/mnt/offsite/" + backupName + ".enc";
+                string basebackupName = _backupName;
+                string outFileName = _backupName + ".enc";
                 int generationCount = 1;
-                
+
                 while (true)
                 {
                     if (generationCount > 9999)
                     {
                         break;
                     }
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+
+                    //outFileName = backupName + ".enc";
+
+                    if (googleClient.ListObjects(_googleBucketName, outFileName).Count() > 0)
                     {
-                        outFileName = "c:\\temp\\" + backupName + ".enc";
-                    }
-                    else
-                    {
-                        outFileName = "/mnt/offsite/" + backupName + ".enc";
-                    }
-                    if (File.Exists(outFileName))
-                    {
-                        backupName = basebackupName +"-" +generationCount;
+                        _backupName = basebackupName + "-" + generationCount;
+                        outFileName = _backupName + ".enc";
                         generationCount++;
                     }
                     else { break; }
                 }
                 long startTimeStamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
 
-                new Utils().AES_EncryptStream(this.customerGuid,inStream, outFileName, properties.ContentLength, backupName, passPhrase);
-                FileInfo fi = new FileInfo(outFileName);
+                new Utils().AES_EncryptStream(this._customerGuid, inStream, contentType, _googleBucketName, outFileName, properties.ContentLength, _backupName, _passPhrase);
+                Google.Apis.Storage.v1.Data.Object outFileProperties = googleClient.GetObject(_googleBucketName, outFileName);
+
+                //StorageClient googleClient = StorageClient.Create();
                 //Check filelengths, make sure they match? or are reasonable
                 //Delete bacpac file on Azure 
                 blobClient.Delete();
                 FileDTO fileDTO = new FileDTO();
-                fileDTO.FileName = backupName;
+                fileDTO.FileName = _backupName;
                 fileDTO.Status = "Success";
                 string myJson = JsonConvert.SerializeObject(fileDTO);
 
                 GenericMessage.msgTypes msgType = GenericMessage.msgTypes.backupComplete;
                 genericMessage.msgType = msgType.ToString();
                 genericMessage.msg = myJson;
-                genericMessage.guid = customerGuid;
+                genericMessage.guid = _customerGuid;
 
                 //await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
-                HTTPUtils.Instance.writeToLog(this.customerGuid, "BACKUP-END", "Completed encryption, deleted : " + basebackupName);
-                HTTPUtils.Instance.writeBackupHistory(this.customerGuid, basebackupName,backupName, fi.Length, startTimeStamp);
-                string messageType = HttpUtility.UrlEncode(basebackupName + "-backupComplete-" + this.customerGuid);
-                ServiceBusUtils.postMsg2ControllerAsync("agent/putCache", this.customerGuid, messageType, JsonConvert.SerializeObject(genericMessage));
-               // HTTPUtils.Instance.putCache(this.customerGuid, payload, JsonConvert.SerializeObject(genericMessage));
+                HTTPUtils.Instance.writeToLog(this._customerGuid, "BACKUP-END", "Completed encryption, deleted : " + basebackupName);
+                HTTPUtils.Instance.writeBackupHistory(this._customerGuid, basebackupName, _backupName, (long)outFileProperties.Size, startTimeStamp);
+                string messageType = HttpUtility.UrlEncode(basebackupName + "-backupComplete-" + this._customerGuid);
+                ServiceBusUtils.postMsg2ControllerAsync("agent/putCache", this._customerGuid, messageType, JsonConvert.SerializeObject(genericMessage));
+                // HTTPUtils.Instance.putCache(this.customerGuid, payload, JsonConvert.SerializeObject(genericMessage));
                 //Console.WriteLine("Completed encryption, deleted : " + basebackupName + " payload:" + messageType);
                 ThreadUtils.deleteFromQueue(basebackupName);
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(this.customerGuid, "ERROR", backupName+" "+ ex.ToString());
+                HTTPUtils.Instance.writeToLog(this._customerGuid, "ERROR", _backupName + " " + ex.ToString());
                 Console.WriteLine();
 
             }

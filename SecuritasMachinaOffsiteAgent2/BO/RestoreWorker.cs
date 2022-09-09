@@ -10,6 +10,8 @@ using System.Text;
 
 using Common.Utils.Comm;
 using System.Web;
+using Google.Cloud.Storage.V1;
+using System.ComponentModel.DataAnnotations;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
@@ -18,22 +20,24 @@ namespace SecuritasMachinaOffsiteAgent.BO
         private string authToken;
         private string azureBlobEndpoint;
 
-        private string restoreName;
-        private string passPhrase;
-        private string azureBlobRestoreContainerName;
+        private string _restoreName;
+        private string _passPhrase;
+        private string _azureBlobRestoreContainerName;
+        private string _googleBucketName;
         //private BackgroundWorker worker;
         //private int loopCount = 0;
 
-        public RestoreWorker(string customerGuid, string azureBlobRestoreContainerName, string azureBlobEndpoint, string BlobContainerName, string restoreName, string passPhrase)
+        public RestoreWorker(string customerGuid, string pGoogleBucketName,string azureBlobRestoreContainerName, string azureBlobEndpoint, string BlobContainerName, string restoreName, string passPhrase)
         {
             Console.WriteLine("Starting RestoreWorker for " + restoreName);
             this.authToken = customerGuid;
             this.azureBlobEndpoint = azureBlobEndpoint;
             //this.BlobContainerName = BlobContainerName;
 
-            this.restoreName = restoreName;
-            this.passPhrase = passPhrase;
-            this.azureBlobRestoreContainerName = azureBlobRestoreContainerName;
+            this._restoreName = restoreName;
+            this._passPhrase = passPhrase;
+            this._googleBucketName = pGoogleBucketName;
+            this._azureBlobRestoreContainerName = azureBlobRestoreContainerName;
 
         }
 
@@ -45,24 +49,24 @@ namespace SecuritasMachinaOffsiteAgent.BO
             GenericMessage genericMessage = new GenericMessage();
             try
             {
-                string baseFilename = Path.GetFileName(restoreName);
-                //string baseFilename = Path.GetFileName(restoreName);
-                HTTPUtils.Instance.writeToLog(authToken, "RESTORE-START", "Starting Restore for:" + baseFilename);
+                
+                HTTPUtils.Instance.writeToLog(authToken, "RESTORE-START", "Starting Restore for:" + _restoreName);
                 FileDTO fileDTO = new FileDTO();
-                fileDTO.FileName = restoreName;
+                fileDTO.FileName = _restoreName;
                 fileDTO.Status = "InProgress";
 
                 string myJson = JsonConvert.SerializeObject(fileDTO);
                 GenericMessage genericMessage2 = new GenericMessage();
-
-                FileStream inStream = new FileStream(restoreName, FileMode.Open);
+                StorageClient googleClient = StorageClient.Create();
+               
+                //FileStream inStream = new FileStream(restoreName, FileMode.Open);
                 BlobServiceClient blobServiceClient = new BlobServiceClient(azureBlobEndpoint);
 
-                BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(azureBlobRestoreContainerName);
+                BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(_azureBlobRestoreContainerName);
 
 
                 int generationCount = 1;
-                string restoreFileName = baseFilename.Replace(".enc", "");
+                string restoreFileName = _restoreName.Replace(".enc", "");
                 string baseRestoreName = restoreFileName;
                 var blockBlobClient = containerClient.GetBlobClient(restoreFileName);
                 while (true)
@@ -74,25 +78,28 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     if (blockBlobClient.Exists())
                     {
 
-                        HTTPUtils.Instance.writeToLog(authToken, "INFO", $"{restoreFileName} exists in {azureBlobRestoreContainerName}, retrying as {baseRestoreName + "-" + generationCount}");
+                        HTTPUtils.Instance.writeToLog(authToken, "INFO", $"{restoreFileName} exists in {_azureBlobRestoreContainerName}, retrying as {baseRestoreName + "-" + generationCount}");
                         restoreFileName = baseRestoreName + "-" + generationCount;
                         blockBlobClient = containerClient.GetBlobClient(restoreFileName);
                         generationCount++;
                     }
                     else
                     {
-                        HTTPUtils.Instance.writeToLog(authToken, "INFO", $"Writing as {restoreFileName} in {azureBlobRestoreContainerName}");
+                        HTTPUtils.Instance.writeToLog(authToken, "INFO", $"Writing as {restoreFileName} in {_azureBlobRestoreContainerName}");
                         break;
                     }
                 }
 
 
-
+                Google.Apis.Storage.v1.Data.Object googleFile = googleClient.GetObject(_googleBucketName, _restoreName);
+                string contentType = googleFile.ContentType;
+                long? googleFileLength = (long?)googleFile.Size;
                 var outStream = await blockBlobClient.OpenWriteAsync(true);
 
-                new Utils().AES_DecryptStream(authToken, inStream, outStream, new FileInfo(restoreName).Length, baseFilename, passPhrase);
+                new Utils().AES_DecryptStream(authToken, this._googleBucketName, _restoreName, outStream, (long)googleFileLength, _restoreName, _passPhrase);
+                
                 //FileDTO fileDTO = new FileDTO();
-                fileDTO.FileName = baseFilename;
+                fileDTO.FileName = _restoreName;
                 fileDTO.Status = "Success";
                 //fileDTO.length = outStream.Length;
 
@@ -103,13 +110,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage2.guid = authToken;
                 //baseFilename + "-" + genericMessage2.msgType + "-" +
 
-                HTTPUtils.Instance.putCache(authToken, baseFilename + "-" + genericMessage2.msgType, JsonConvert.SerializeObject(genericMessage2));
-                HTTPUtils.Instance.writeToLog(authToken, "RESTORE-END", $"Restore Completed for {baseFilename} restored as {restoreFileName}");
+                HTTPUtils.Instance.putCache(authToken, _restoreName + "-" + genericMessage2.msgType, JsonConvert.SerializeObject(genericMessage2));
+                HTTPUtils.Instance.writeToLog(authToken, "RESTORE-END", $"Restore Completed for {_restoreName} restored as {restoreFileName}");
 
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(this.authToken, "ERROR", restoreName + " " + ex.ToString());
+                HTTPUtils.Instance.writeToLog(this.authToken, "ERROR", _restoreName + " " + ex.ToString());
                 // Console.WriteLine();
 
             }

@@ -19,14 +19,15 @@ namespace Common.Statics
         public static string? controllerTopicName;
         public static int PollBaseTime=1;
         public static string AppVersion;
-        public static string mountedDir = "/mnt/offsite/";
+        //public static string mountedDir = "/mnt/offsite/";
         internal static string? azureBlobEndpoint;
         internal static string? envPassPhrase;
-        internal static string? azureBlobContainerName;
+        internal static string? azureSourceBlobContainerName;
         internal static string? azureBlobRestoreContainerName;
         internal static int RetentionDays;
         internal static string? serviceBusTopic;
         internal static string? GoogleStorageBucketName;
+        internal static int MaxThreads;
 
         public static string WebListenerURL
         {

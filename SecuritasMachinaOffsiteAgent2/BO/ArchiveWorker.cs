@@ -1,6 +1,8 @@
 ﻿
+using Common.DTO.V2;
 using Common.Statics;
 using Common.Utils.Comm;
+using SecuritasMachinaOffsiteAgent.Utils.Comm.GoogleAPI;
 using System.Web;
 
 namespace SecuritasMachinaOffsiteAgent.BO
@@ -9,13 +11,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
     {
         private int retentionDays;
 
-        private string inPath;
+        private string googleBucketName;
         private string authtoken;
 
         public ArchiveWorker(string pAuthkey, string inPath, int retentionDays)
         {
             this.authtoken = pAuthkey;
-            this.inPath = inPath;
+            this.googleBucketName = inPath;
             this.retentionDays = retentionDays;
 
         }
@@ -28,29 +30,32 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             DateTime purgeOlderDate = DateTime.Now.AddDays(retentionDays * -1);
 
-            HTTPUtils.Instance.writeToLog(this.authtoken, "INFO", $"Scanning {inPath} for Last Write Time over {retentionDays} old ({purgeOlderDate.ToShortDateString()})");
-            DirectoryInfo directoryInfo = new DirectoryInfo(inPath);
-            List<FileInfo> Files2 = directoryInfo.GetFiles("*").ToList();
+            HTTPUtils.Instance.writeToLog(this.authtoken, "INFO", $"Scanning {googleBucketName} for Last Write Time over {retentionDays} old ({purgeOlderDate.ToShortDateString()})");
+
+            DirListingDTO dirListingDTO = CloudUtils.Instance.listFiles(googleBucketName);
+           
 
             try
             {
                 bool filesDeleted = false;
-                foreach (FileInfo file in Files2)
+                foreach (FileDTO file in dirListingDTO.fileDTOs)
                 {
-                    if (file.LastWriteTime < purgeOlderDate)
+                    if (file.lastWriteDateTime < purgeOlderDate)
                     {
-                        file.Delete();
-                        HTTPUtils.Instance.writeToLog(this.authtoken, "DELETING", file.Name);
+                        
+                        
+                        HTTPUtils.Instance.writeToLog(this.authtoken, "DELETING", file.FileName);
+                        CloudUtils.Instance.deleteFile(googleBucketName, file.FileName);
                         filesDeleted = true;
                     }
 
                 }
                 if (filesDeleted)
-                    Utils.UpdateOffsiteBytes(RunTimeSettings.customerAuthKey, RunTimeSettings.mountedDir);
+                    Utils.UpdateOffsiteBytes(RunTimeSettings.customerAuthKey, RunTimeSettings.GoogleStorageBucketName);
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(this.authtoken, "ERROR", inPath + " ArchiveWorker: " + ex.ToString());
+                HTTPUtils.Instance.writeToLog(this.authtoken, "ERROR", googleBucketName + " ArchiveWorker: " + ex.ToString());
 
             }
             Thread.Sleep(6 * 60 * 60 * 1000 * RunTimeSettings.PollBaseTime);

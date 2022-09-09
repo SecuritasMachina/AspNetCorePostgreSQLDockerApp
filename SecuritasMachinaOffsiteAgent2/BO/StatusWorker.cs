@@ -32,9 +32,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
             if (blobServiceClient == null)
                 blobServiceClient = new BlobServiceClient(RunTimeSettings.azureBlobEndpoint);
             if (stagingContainerClient == null)
-                stagingContainerClient = blobServiceClient.GetBlobContainerClient(RunTimeSettings.azureBlobContainerName);
+                stagingContainerClient = blobServiceClient.GetBlobContainerClient(RunTimeSettings.azureSourceBlobContainerName);
 
-            DirListingDTO agentDirList = Utils.doDirListing(RunTimeSettings.customerAuthKey, RunTimeSettings.mountedDir);
+            DirListingDTO agentDirList = Utils.doDirListing(RunTimeSettings.customerAuthKey, RunTimeSettings.GoogleStorageBucketName);
 
             DirListingDTO stagingContainerDirListingDTO1 =  Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync()).Result;
 

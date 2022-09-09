@@ -1,5 +1,7 @@
-﻿using System;
+﻿using Common.Statics;
+using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,11 +12,24 @@ namespace SecuritasMachinaOffsiteAgent.BO
     internal class ThreadUtils
     {
 
-        
-        static Dictionary<string, BackupWorker> dt = new Dictionary<string, BackupWorker>();
+        //private static int maxThreads = 1;
+        static ConcurrentDictionary<string, BackupWorker> dt = new ConcurrentDictionary<string, BackupWorker>();
+
         internal static void deleteFromQueue(string key)
         {
-            dt.Remove(key);
+            BackupWorker tmp = null;
+            // BackupWorker tmp = dt.TryGetValue(key);
+            bool v = dt.TryRemove(key, out tmp);
+        }
+        internal static bool isInQueue(string pBackupWorkerName)
+        {
+            bool ret = true;
+            if (!dt.ContainsKey(pBackupWorkerName))
+            {
+                ret = false;
+            }
+
+            return ret;
         }
         internal static void addToQueue(BackupWorker backupWorker)
         {
@@ -24,14 +39,23 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             else
             {
-                dt.Add(backupWorker.ToString(), backupWorker);
-                ThreadPool.QueueUserWorkItem(async x =>
+                while (getActiveThreads() >= RunTimeSettings.MaxThreads)
                 {
-                    await backupWorker.StartAsync();
-                    deleteFromQueue(backupWorker.ToString());
+                    Thread.Sleep(5 * 1000);
+                }
+                string backWorkerName = backupWorker.ToString();
+                if (!dt.ContainsKey(backWorkerName))
+                {
+                    dt.TryAdd(backWorkerName, backupWorker);
+                    ThreadPool.QueueUserWorkItem(async x =>
+                    {
+                        await backupWorker.StartAsync();
+                        deleteFromQueue(backWorkerName);
+                        Thread.Sleep(100);
+                        // countdownEvent.Signal();
+                    });
+                }
 
-                // countdownEvent.Signal();
-                });
             }
         }
 
