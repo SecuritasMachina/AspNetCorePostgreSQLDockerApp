@@ -194,30 +194,31 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 await processor.StartProcessingAsync();
                 HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Listening on {RunTimeSettings.customerAuthKey}");
                 //Start up background jobs
-                Thread.Sleep(new Random().Next(2000));
+                int maxRandomWait = 2000;
+                Thread.Sleep(new Random().Next(maxRandomWait));
                 Timer archiveWorkerTimer = new Timer();
-                archiveWorkerTimer.Interval = 1000 * 60 * 60 * 6;
+                archiveWorkerTimer.Interval = (1000 * 60 * 60 * 6) + (new Random().Next(maxRandomWait));
                 archiveWorkerTimer.Elapsed += archiveWorkerOnTimedEvent;
                 archiveWorkerTimer.AutoReset = true; archiveWorkerTimer.Enabled = true;
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Retention Expired worker for {RunTimeSettings.GoogleStorageBucketName}");
-                Thread.Sleep(new Random().Next(2000));
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Delete old files worker for {RunTimeSettings.GoogleStorageBucketName}");
+                Thread.Sleep(new Random().Next(maxRandomWait));
                 Timer statusWorkerTimer = new Timer();
-                statusWorkerTimer.Interval = 1000 * 60 * 1;
+                statusWorkerTimer.Interval = (1000 * 60 * 1) + (new Random().Next(maxRandomWait));
                 statusWorkerTimer.Elapsed += statusWorkerOnTimedEvent;
                 statusWorkerTimer.AutoReset = true; statusWorkerTimer.Enabled = true;
                 HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Status worker");
-                Thread.Sleep(new Random().Next(2000));
+                Thread.Sleep(new Random().Next(maxRandomWait));
                 Timer offSiteWorkerTimer = new Timer();
-                offSiteWorkerTimer.Interval = 1000 * 60 * 10;
+                offSiteWorkerTimer.Interval = (1000 * 60 * 10) + (new Random().Next(maxRandomWait));
                 offSiteWorkerTimer.Elapsed += offsiteWorkerOnTimedEvent;
                 offSiteWorkerTimer.AutoReset = true; offSiteWorkerTimer.Enabled = true;
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started OffSite worker for {RunTimeSettings.GoogleStorageBucketName}");
-                Thread.Sleep(new Random().Next(2000));
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started OffSite Status worker for {RunTimeSettings.GoogleStorageBucketName}");
+                Thread.Sleep(new Random().Next(maxRandomWait));
                 Timer scanStageWorkerTimer = new Timer();
-                scanStageWorkerTimer.Interval = 1000 * 60 * 1;
+                scanStageWorkerTimer.Interval = (1000 * 60 * 1) + (new Random().Next(maxRandomWait));
                 scanStageWorkerTimer.Elapsed += scanStageWorkerOnTimedEvent;
                 scanStageWorkerTimer.AutoReset = true; scanStageWorkerTimer.Enabled = true;
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Scan worker for container {RunTimeSettings.azureSourceBlobContainerName}");
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Scan for Files worker for container {RunTimeSettings.azureSourceBlobContainerName}");
 
 
                 while (true)

@@ -98,17 +98,17 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 new Utils().AES_DecryptStream(authToken, this._googleBucketName, _restoreName, outStream, (long)googleFileLength, _restoreName, _passPhrase);
                 
-                //FileDTO fileDTO = new FileDTO();
+                
                 fileDTO.FileName = _restoreName;
                 fileDTO.Status = "Success";
-                //fileDTO.length = outStream.Length;
+                
 
                 genericMessage2 = new GenericMessage();
 
                 genericMessage2.msgType = "restoreComplete";
                 genericMessage2.msg = JsonConvert.SerializeObject(fileDTO);
                 genericMessage2.guid = authToken;
-                //baseFilename + "-" + genericMessage2.msgType + "-" +
+                
 
                 HTTPUtils.Instance.putCache(authToken, _restoreName + "-" + genericMessage2.msgType, JsonConvert.SerializeObject(genericMessage2));
                 HTTPUtils.Instance.writeToLog(authToken, "RESTORE-END", $"Restore Completed for {_restoreName} restored as {restoreFileName}");

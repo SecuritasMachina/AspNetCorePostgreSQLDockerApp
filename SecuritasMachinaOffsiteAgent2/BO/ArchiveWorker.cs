@@ -3,7 +3,6 @@ using Common.DTO.V2;
 using Common.Statics;
 using Common.Utils.Comm;
 using SecuritasMachinaOffsiteAgent.Utils.Comm.GoogleAPI;
-using System.Web;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
@@ -30,7 +29,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             DateTime purgeOlderDate = DateTime.Now.AddDays(retentionDays * -1);
 
-            HTTPUtils.Instance.writeToLog(this.authtoken, "INFO", $"Scanning {googleBucketName} for Last Write Time over {retentionDays} old ({purgeOlderDate.ToShortDateString()})");
+            HTTPUtils.Instance.writeToLog(this.authtoken, "INFO", $"Scanning {googleBucketName} for Last Write Time over {retentionDays} days old ({purgeOlderDate.ToShortDateString()})");
 
             DirListingDTO dirListingDTO = CloudUtils.Instance.listFiles(googleBucketName);
            
@@ -42,7 +41,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 {
                     if (file.lastWriteDateTime < purgeOlderDate)
                     {
-                        
                         
                         HTTPUtils.Instance.writeToLog(this.authtoken, "DELETING", file.FileName);
                         CloudUtils.Instance.deleteFile(googleBucketName, file.FileName);
@@ -58,7 +56,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 HTTPUtils.Instance.writeToLog(this.authtoken, "ERROR", googleBucketName + " ArchiveWorker: " + ex.ToString());
 
             }
-            Thread.Sleep(6 * 60 * 60 * 1000 * RunTimeSettings.PollBaseTime);
+            //Thread.Sleep(6 * 60 * 60 * 1000 * RunTimeSettings.PollBaseTime);
         }
 
 

@@ -44,7 +44,7 @@ namespace SecuritasMachinaOffsiteAgent.Utils.Comm.GoogleAPI
         public DirListingDTO listFiles(string pGoogleStorageBucketName)
         {
 
-            // List objects\
+           
             DirListingDTO ret = new DirListingDTO();
             foreach (var file in _client.ListObjects(pGoogleStorageBucketName, "").OrderByDescending(f => f.Updated))
             {
