@@ -24,9 +24,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         public void StartAsync()
         {
-            
-
-
+        
             DateTime purgeOlderDate = DateTime.Now.AddDays(retentionDays * -1);
 
             HTTPUtils.Instance.writeToLog(this.authtoken, "INFO", $"Scanning {googleBucketName} for Last Write Time over {retentionDays} days old ({purgeOlderDate.ToShortDateString()})");

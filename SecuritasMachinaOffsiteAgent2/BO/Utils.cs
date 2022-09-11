@@ -121,18 +121,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 StorageClient googleClient = StorageClient.Create();
                 byte[] salt = GenerateRandomSalt();
 
-                //convert password string to byte arrray
-                //  byte[] passwordBytes = System.Text.Encoding.UTF8.GetBytes(password);
-
-                // Create an Aes object
-                // with the specified key and IV.
+               
                 using (Aes aesAlg = Aes.Create())
                 {
-                    //aesAlg.Key = passwordBytes;
-                    //  aesAlg.IV = Encoding.ASCII.GetBytes("01234A678C123456");
-
-                    // Create an encryptor to perform the stream transform.
-                    // ICryptoTransform encryptor = aesAlg.CreateEncryptor(aesAlg.Key, aesAlg.IV);
+                    
 
                     // Create the streams used for encryption.
                     using (pInStream)
@@ -148,7 +140,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                              {
                                  DateTime end = DateTime.Now;
                                  var result = end.Subtract(start).TotalMinutes;
-                                 if (result > 1)
+                                 if (result >= 1)
                                  {
                                      int percentComplete = (int)Math.Round((double)(100 * p.BytesSent) / (double)pContentLength);
                                      HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pBaseFileName} is {percentComplete}% complete");
@@ -194,15 +186,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
                 //byte[] passwordBytes = Encoding.UTF8.GetBytes(password);
                 password = password.Substring(0, 32);
-                //aesAlg.Key = passwordBytes;
-                //aesAlg.IV = Encoding.ASCII.GetBytes("01234A678C123456");
+               
                 StorageClient googleClient = StorageClient.Create();
-                // Create an encryptor to perform the stream transform.
-                //ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
-
-                // googleFile.
-                //googleFile.
-                // Create the streams used for encryption.
+                
                 DownloadObjectOptions downloadObjectOptions = new DownloadObjectOptions();
                 EncryptionKey encryptionKey = EncryptionKey.Create(Encoding.UTF8.GetBytes(password));
                 downloadObjectOptions.EncryptionKey = encryptionKey;
@@ -212,7 +198,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                    {
                        DateTime end = DateTime.Now;
                        var result = end.Subtract(start).TotalMinutes;
-                       if (result > 1)
+                       if (result >= 1)
                        {
                            int percentComplete = (int)Math.Round((double)(100 * p.BytesDownloaded) / (double)pContentLength);
                            HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pFileToRestore} is {percentComplete}% complete");
