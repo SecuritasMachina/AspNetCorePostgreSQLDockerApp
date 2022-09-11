@@ -219,7 +219,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 scanStageWorkerTimer.Elapsed += scanStageWorkerOnTimedEvent;
                 scanStageWorkerTimer.AutoReset = true; scanStageWorkerTimer.Enabled = true;
                 HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Scan for Files worker for container {RunTimeSettings.azureSourceBlobContainerName}");
-
+                Console.WriteLine();
+                Console.WriteLine("All Workers Ready");
 
                 while (true)
                 {

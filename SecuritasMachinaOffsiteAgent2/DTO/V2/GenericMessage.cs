@@ -14,7 +14,7 @@ namespace Common.DTO.V2
         
         public string? nameSpace;
         public string? authKey;
-        public long timeStamp= new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
+        public long timeStamp= new DateTimeOffset(DateTime.UtcNow).ToUniversalTime().ToUnixTimeMilliseconds();
 
         public enum msgTypes
         {

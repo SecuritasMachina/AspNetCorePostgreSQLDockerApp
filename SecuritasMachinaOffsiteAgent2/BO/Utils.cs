@@ -192,17 +192,19 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 DownloadObjectOptions downloadObjectOptions = new DownloadObjectOptions();
                 EncryptionKey encryptionKey = EncryptionKey.Create(Encoding.UTF8.GetBytes(password));
                 downloadObjectOptions.EncryptionKey = encryptionKey;
+                
                 DateTime start = DateTime.Now;
                 var progress = new Progress<IDownloadProgress>(
                    p =>
                    {
                        DateTime end = DateTime.Now;
-                       var result = end.Subtract(start).TotalMinutes;
-                       if (result >= 1)
+                       var result = end.Subtract(start).TotalSeconds;
+                       if (result >= 10)
                        {
+                           start = DateTime.Now;
                            int percentComplete = (int)Math.Round((double)(100 * p.BytesDownloaded) / (double)pContentLength);
                            HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pFileToRestore} is {percentComplete}% complete");
-                           start = DateTime.Now;
+                           
                        }
                    }
                 );

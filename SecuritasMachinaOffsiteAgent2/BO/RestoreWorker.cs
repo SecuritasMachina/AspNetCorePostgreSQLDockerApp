@@ -97,8 +97,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 var outStream = await blockBlobClient.OpenWriteAsync(true);
 
                 new Utils().AES_DecryptStream(authToken, this._googleBucketName, _restoreName, outStream, (long)googleFileLength, _restoreName, _passPhrase);
-                
-                
+                outStream.Flush();
+                outStream.Close();
+
+
                 fileDTO.FileName = _restoreName;
                 fileDTO.Status = "Success";
                 
