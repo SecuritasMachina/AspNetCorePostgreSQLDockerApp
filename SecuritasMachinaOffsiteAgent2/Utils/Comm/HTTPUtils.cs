@@ -89,41 +89,10 @@ namespace Common.Utils.Comm
             }
         }
 
-        public void writeToLog(string? guid, string? messageType, string? json)
+        public void writeToLog(string? pAuthKey, string? messageType, string? json)
         {
-            /*if (json == null)
-                json = "empty msg";
-            string serializedJson = JsonConvert.SerializeObject(json);
-            Console.WriteLine($"writeToLog: guid:{guid} messageType:{messageType} json:{json}");
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(RunTimeSettings.WebListenerURL + "api/v3/putLog/" + RunTimeSettings.topicCustomerGuid + "/" + messageType);
-            request.Method = "POST";
-            request.ContentType = "application/json";
-            request.Accept = "application/json";
-            request.ContentLength = serializedJson.Length;
-            request.Headers.Add("AuthToken", RunTimeSettings.authKey);
-            using (Stream webStream = request.GetRequestStream())
-            using (StreamWriter requestWriter = new StreamWriter(webStream, System.Text.Encoding.ASCII))
-            {
-                requestWriter.Write(serializedJson);
-            }
-
-            try
-            {
-                WebResponse webResponse = request.GetResponse();
-                using (Stream webStream = webResponse.GetResponseStream() ?? Stream.Null)
-                using (StreamReader responseReader = new StreamReader(webStream))
-                {
-                    string response = responseReader.ReadToEnd();
-                    Console.Out.WriteLine(response);
-                }
-            }
-            catch (Exception e)
-            {
-                Console.Out.WriteLine("-----------------");
-                Console.Out.WriteLine(e.Message);
-                
-            }*/
-            ServiceBusUtils.postMsg2ControllerAsync("agent/logs", guid, messageType, json);
+           
+            ServiceBusUtils.postMsg2ControllerAsync("agent/logs", pAuthKey, messageType, json);
         }
         public void writeBackupHistory(string? guid, string? backupFile, string newFileName, long fileLength, long startTimeStamp)
         {

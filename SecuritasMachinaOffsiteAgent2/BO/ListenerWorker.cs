@@ -197,7 +197,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 int maxRandomWait = 2000;
                 Thread.Sleep(new Random().Next(maxRandomWait));
                 Timer archiveWorkerTimer = new Timer();
-                archiveWorkerTimer.Interval = (1000 * 60 * 60 * 1) + (new Random().Next(maxRandomWait));
+                if (RunTimeSettings.RetentionDays == 0) RunTimeSettings.RetentionDays = 1;
+                if (RunTimeSettings.RetentionDays!=0)
+                    archiveWorkerTimer.Interval = (1000 * 60 * 60 * 1) + (new Random().Next(maxRandomWait));
+                else
+                    archiveWorkerTimer.Interval = (1000 * 10 );
                 archiveWorkerTimer.Elapsed += archiveWorkerOnTimedEvent;
                 archiveWorkerTimer.AutoReset = true; archiveWorkerTimer.Enabled = true;
                 HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Delete files worker for {RunTimeSettings.GoogleStorageBucketName}");

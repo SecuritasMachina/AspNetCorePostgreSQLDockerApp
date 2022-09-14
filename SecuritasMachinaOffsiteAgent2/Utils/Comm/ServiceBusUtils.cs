@@ -18,9 +18,9 @@ namespace Common.Utils.Comm
 
         // the sender used to publish messages to the queue
         static ServiceBusSender? sender;
-        public static async Task postMsg2ControllerAsync(string? nameSpace, string? guid, string? messageType, string? json)
+        public static async Task postMsg2ControllerAsync(string? nameSpace, string? pAuthKey, string? messageType, string? json)
         {
-           // Console.WriteLine($"nameSpace:{nameSpace} messageType:{messageType} RunTimeSettings.sbrootConnectionString {RunTimeSettings.sbrootConnectionString}");
+            // Console.WriteLine($"nameSpace:{nameSpace} messageType:{messageType} RunTimeSettings.sbrootConnectionString {RunTimeSettings.sbrootConnectionString}");
             try
             {
                 if (client == null)
@@ -28,21 +28,22 @@ namespace Common.Utils.Comm
                 if (sender == null)
                     sender = client.CreateSender("coordinator");
                 GenericMessage genericMessage = new GenericMessage();
-                genericMessage.guid = guid;
+                genericMessage.guid = pAuthKey;
                 genericMessage.nameSpace = nameSpace;
                 genericMessage.msgType = messageType;
                 genericMessage.msg = json;
+                genericMessage.timeStamp = new DateTimeOffset(DateTime.UtcNow).ToUniversalTime().ToUnixTimeMilliseconds();
                 genericMessage.authKey = RunTimeSettings.authKey;
-                //Console.WriteLine(messageType+" "+ json);
+                
                 ServiceBusMessageBatch messageBatch = await sender.CreateMessageBatchAsync();
                 messageBatch.TryAddMessage(new ServiceBusMessage(JsonConvert.SerializeObject(genericMessage)));
                 await sender.SendMessagesAsync(messageBatch);
-               // Console.WriteLine($"wROTE TO nameSpace:{nameSpace} messageType:{messageType} RunTimeSettings.sbrootConnectionString {RunTimeSettings.sbrootConnectionString}");
+                // Console.WriteLine($"wROTE TO nameSpace:{nameSpace} messageType:{messageType} RunTimeSettings.sbrootConnectionString {RunTimeSettings.sbrootConnectionString}");
             }
             catch (Exception ex)
             {
-               // HTTPUtils.Instance.writeToLog(guid, "ERROR", "postMsg2ControllerAsync:"+ ex.ToString());
-                Console.WriteLine("postMsg2ControllerAsync "+ex.ToString()+"\r\n"+ RunTimeSettings.sbrootConnectionString);
+                
+                Console.WriteLine("postMsg2ControllerAsync " + ex.ToString() + "\r\n" + RunTimeSettings.sbrootConnectionString);
             }
         }
     }
