@@ -30,6 +30,7 @@ RUN apt-get update && \
    
 RUN update-ca-certificates && \
     apt-get install openssl -y && \
+    apt-get install git -y && \
     apt-get clean && \
     echo export SSL_CERT_DIR=/etc/ssl/certs >> /etc/bash.bashrc && \
     echo export CURL_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt >> /etc/bash.bashrc

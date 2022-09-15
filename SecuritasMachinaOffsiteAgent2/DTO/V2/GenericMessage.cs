@@ -21,7 +21,8 @@ namespace Common.DTO.V2
             dirListing,
             restoreRequest,
             restoreComplete,
-            backupComplete
+            backupComplete,
+            REPOLIST
         }
     }
 }

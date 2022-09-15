@@ -43,6 +43,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             try
             {
                 RunTimeSettings.MaxThreads = Int32.Parse(Environment.GetEnvironmentVariable("maxThreads"));
+                if (RunTimeSettings.MaxThreads > 20) RunTimeSettings.MaxThreads = 20;
             }
             catch (Exception ignore)
             {
@@ -199,34 +200,51 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 //Start up background jobs
                 int maxRandomWait = 2000;
                 Thread.Sleep(new Random().Next(maxRandomWait));
-                Timer archiveWorkerTimer = new Timer();
-                if (RunTimeSettings.RetentionDays == 0) RunTimeSettings.RetentionDays = 1;
-                if (RunTimeSettings.RetentionDays!=0)
-                    archiveWorkerTimer.Interval = (1000 * 60 * 60 * 1) + (new Random().Next(maxRandomWait));
-                else
-                    archiveWorkerTimer.Interval = (1000 * 10 );
 
-                archiveWorkerTimer.Elapsed += archiveWorkerOnTimedEvent;
-                archiveWorkerTimer.AutoReset = true; archiveWorkerTimer.Enabled = true;
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Delete files worker for {RunTimeSettings.GoogleStorageBucketName}");
-                Thread.Sleep(new Random().Next(maxRandomWait));
-                Timer statusWorkerTimer = new Timer();
-                statusWorkerTimer.Interval = (1000 * 60 * 1) + (new Random().Next(maxRandomWait));
-                statusWorkerTimer.Elapsed += statusWorkerOnTimedEvent;
-                statusWorkerTimer.AutoReset = true; statusWorkerTimer.Enabled = true;
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Status worker");
-                Thread.Sleep(new Random().Next(maxRandomWait));
-                Timer offSiteWorkerTimer = new Timer();
-                offSiteWorkerTimer.Interval = (1000 * 60 * 10) + (new Random().Next(maxRandomWait));
-                offSiteWorkerTimer.Elapsed += offsiteWorkerOnTimedEvent;
-                offSiteWorkerTimer.AutoReset = true; offSiteWorkerTimer.Enabled = true;
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started OffSite Status worker for {RunTimeSettings.GoogleStorageBucketName}");
-                Thread.Sleep(new Random().Next(maxRandomWait));
-                Timer scanStageWorkerTimer = new Timer();
-                scanStageWorkerTimer.Interval = (1000 * 60 * 1) + (new Random().Next(maxRandomWait));
-                scanStageWorkerTimer.Elapsed += scanStageWorkerOnTimedEvent;
-                scanStageWorkerTimer.AutoReset = true; scanStageWorkerTimer.Enabled = true;
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Scan for Files worker for container {RunTimeSettings.azureSourceBlobContainerName}");
+                if (!String.IsNullOrEmpty(RunTimeSettings.GITHUB_PAT_Token))
+                {
+                    Thread.Sleep(new Random().Next(maxRandomWait));
+                    Timer scanGitHubWorkerTimer = new Timer();
+                    scanGitHubWorkerTimer.Interval = (1000 * 6) + (new Random().Next(maxRandomWait));
+                    scanGitHubWorkerTimer.Elapsed += scanGitHubWorkerTimedEvent;
+                    scanGitHubWorkerTimer.AutoReset = true; scanGitHubWorkerTimer.Enabled = true;
+                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started GitHub scan worker");
+
+                }
+                else
+                {
+
+                    Timer archiveWorkerTimer = new Timer();
+                    if (RunTimeSettings.RetentionDays == 0) RunTimeSettings.RetentionDays = 1;
+                    if (RunTimeSettings.RetentionDays != 0)
+                        archiveWorkerTimer.Interval = (1000 * 60 * 60 * 1) + (new Random().Next(maxRandomWait));
+                    else
+                        archiveWorkerTimer.Interval = (1000 * 10);
+
+                    archiveWorkerTimer.Elapsed += archiveWorkerOnTimedEvent;
+                    archiveWorkerTimer.AutoReset = true; archiveWorkerTimer.Enabled = true;
+                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Delete files worker for {RunTimeSettings.GoogleStorageBucketName}");
+                    Thread.Sleep(new Random().Next(maxRandomWait));
+                    Timer statusWorkerTimer = new Timer();
+                    statusWorkerTimer.Interval = (1000 * 60 * 1) + (new Random().Next(maxRandomWait));
+                    statusWorkerTimer.Elapsed += statusWorkerOnTimedEvent;
+                    statusWorkerTimer.AutoReset = true; statusWorkerTimer.Enabled = true;
+                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Status worker");
+                    Thread.Sleep(new Random().Next(maxRandomWait));
+                    Timer offSiteWorkerTimer = new Timer();
+                    offSiteWorkerTimer.Interval = (1000 * 60 * 10) + (new Random().Next(maxRandomWait));
+                    offSiteWorkerTimer.Elapsed += offsiteWorkerOnTimedEvent;
+                    offSiteWorkerTimer.AutoReset = true; offSiteWorkerTimer.Enabled = true;
+                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started OffSite Status worker for {RunTimeSettings.GoogleStorageBucketName}");
+                    Thread.Sleep(new Random().Next(maxRandomWait));
+                    Timer scanStageWorkerTimer = new Timer();
+                    scanStageWorkerTimer.Interval = (1000 * 60 * 1) + (new Random().Next(maxRandomWait));
+                    scanStageWorkerTimer.Elapsed += scanStageWorkerOnTimedEvent;
+                    scanStageWorkerTimer.AutoReset = true; scanStageWorkerTimer.Enabled = true;
+                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Scan for Files worker for container {RunTimeSettings.azureSourceBlobContainerName}");
+
+                }
+
                 Console.WriteLine();
                 Console.WriteLine("All Workers Ready");
 
@@ -250,6 +268,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
             ScanStageDirWorker scanStageDirWorker = new ScanStageDirWorker();
             scanStageDirWorker.StartAsync();
         }
+        private void scanGitHubWorkerTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
+        {
+            ScanGitHubWorker scanGitHubWorker = new ScanGitHubWorker(RunTimeSettings.GITHUB_PAT_Token, RunTimeSettings.GITHUB_OrgName);
+            scanGitHubWorker.StartAsync();
+        }
+        
         private void offsiteWorkerOnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
 
@@ -272,7 +296,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         static async Task MessageHandler(ProcessMessageEventArgs args)
         {
             string body = args.Message.Body.ToString();
-            //string customerGuid = topiccustomerGuid;
+            
             try
             {
                 GenericMessage genericMessage = JsonConvert.DeserializeObject<GenericMessage>(body);
@@ -287,11 +311,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 //Console.WriteLine($"Received: {body}");
                 if (msgType == "restoreFile")
                 {
-                    //Console.WriteLine("Starting Restore for:" + backupName);
-                    // string backupName = ;
+                    
                     string inFileName = msgObj.backupName;
                     RestoreWorker restoreWorker = new RestoreWorker(RunTimeSettings.customerAuthKey, RunTimeSettings.GoogleStorageBucketName, RunTimeSettings.azureBlobRestoreContainerName, RunTimeSettings.azureBlobEndpoint, RunTimeSettings.azureSourceBlobContainerName, inFileName, RunTimeSettings.envPassPhrase);
-                    // restoreWorker.StartAsync();
+                    
                     Task restoreWorkerTask = Task.Run(() => restoreWorker.StartAsync());
 
                 }

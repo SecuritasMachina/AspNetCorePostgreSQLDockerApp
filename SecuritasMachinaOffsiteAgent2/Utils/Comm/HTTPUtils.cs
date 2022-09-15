@@ -97,31 +97,7 @@ namespace Common.Utils.Comm
         public void writeBackupHistory(string? guid, string? backupFile, string newFileName, long fileLength, long startTimeStamp)
         {
 
-            //string serializedJson = JsonConvert.SerializeObject(json);
-            //Debug.WriteLine($"writeToLog: guid:{guid} backupFile:{backupFile} json:{json}");
-            /* string url = RunTimeSettings.WebListenerURL + "api/v3/postBackupHistory/" + RunTimeSettings.topicCustomerGuid + "/" + Uri.EscapeUriString(backupFile) + "/" + Uri.EscapeUriString(newFileName) + "/" + fileLength + "/" + startTimeStamp;
-             try
-             {
-                 HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);Uri
-                 request.AutomaticDecompression = DecompressionMethods.GZip;
-                 request.Headers.Add("AuthToken", RunTimeSettings.authKey);
-                 using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-                 using (Stream stream = response.GetResponseStream())
-                 using (StreamReader reader = new StreamReader(stream))
-                 {
-                     string html = reader.ReadToEnd();
-                     //Console.Out.WriteLine(html);
-                 }
-
-             }
-             catch (Exception e)
-             {
-                 Console.Out.WriteLine("-----------------");
-                 Console.Out.WriteLine(e.Message);
-                 writeToLog(RunTimeSettings.topicCustomerGuid, "ERROR", e.ToString());
-                 //HTTPUtils.instance.writeToLog(guid, "ERROR", e.ToString());
-             }
-            */
+           
             BackupHistoryDTO backupHistoryDTO = new BackupHistoryDTO();
             backupHistoryDTO.startTimeStamp = startTimeStamp;
             backupHistoryDTO.backupFile = backupFile;
