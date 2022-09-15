@@ -51,6 +51,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
 
             RunTimeSettings.customerAuthKey = Environment.GetEnvironmentVariable("customerAgentAuthKey");
+            RunTimeSettings.GITHUB_PAT_Token = Environment.GetEnvironmentVariable("GITHUB_PAT_Token");
+            RunTimeSettings.GITHUB_OrgName = Environment.GetEnvironmentVariable("GITHUB_OrgName");
+
             RunTimeSettings.GoogleStorageBucketName = Environment.GetEnvironmentVariable("googleStorageBucketName");
             //RunTimeSettings.topicCustomerGuid = Environment.GetEnvironmentVariable("customerAgentAuthKey");
             RunTimeSettings.azureBlobEndpoint = Environment.GetEnvironmentVariable("azureBlobEndpoint");
@@ -202,6 +205,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     archiveWorkerTimer.Interval = (1000 * 60 * 60 * 1) + (new Random().Next(maxRandomWait));
                 else
                     archiveWorkerTimer.Interval = (1000 * 10 );
+
                 archiveWorkerTimer.Elapsed += archiveWorkerOnTimedEvent;
                 archiveWorkerTimer.AutoReset = true; archiveWorkerTimer.Enabled = true;
                 HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Started Delete files worker for {RunTimeSettings.GoogleStorageBucketName}");

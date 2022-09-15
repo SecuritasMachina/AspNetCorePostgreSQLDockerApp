@@ -31,6 +31,8 @@ namespace Common.Statics
         internal static int MaxThreads;
         
         internal static string? encryptionPassPhrase;
+        internal static string? GITHUB_PAT_Token;
+        internal static string? GITHUB_OrgName;
 
         public static string WebListenerURL
         {
