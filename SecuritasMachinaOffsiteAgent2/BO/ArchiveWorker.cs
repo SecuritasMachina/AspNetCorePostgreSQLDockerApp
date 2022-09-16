@@ -47,7 +47,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 }
                 if (filesDeleted)
-                    Utils.UpdateOffsiteBytes(RunTimeSettings.customerAuthKey, RunTimeSettings.GoogleStorageBucketName);
+                    Utils.UpdateOffsiteBytes(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName);
             }
             catch (Exception ex)
             {

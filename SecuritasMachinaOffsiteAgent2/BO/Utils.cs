@@ -130,8 +130,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 using (Aes aesAlg = Aes.Create())
                 {
-
-
                     // Create the streams used for encryption.
                     using (pInStream)
                     {
@@ -191,6 +189,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
             using (Aes aesAlg = Aes.Create())
             {
                 //byte[] passwordBytes = Encoding.UTF8.GetBytes(password);
+                if (String.IsNullOrEmpty(password))
+                    password = "AES_EncryptStreamAES_Encrypt2StreamAES_EncryptStreamAES_EncryptStreamAES_EncryptStream";
                 password = password.Substring(0, 32);
 
                 StorageClient googleClient = StorageClient.Create();
@@ -245,7 +245,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         }
         public static int ShellExec(String workingDir, String command)
         {
-            Console.WriteLine(command);
+            //Console.WriteLine(command);
             ProcessStartInfo info;
             cmdOutput = new StringBuilder();
             // Style = ProgressBarStyle.Marquee;
@@ -328,7 +328,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
         }
 
-        internal static void writeFileToGoogle(string _customerGuid, string contentType, string _googleBucketName, string outFileName, string _passPhrase)
+        internal static void writeFileToGoogle(string _customerGuid, string contentType, string _googleBucketName,string pBaseBackupName,  string outFileName, string _passPhrase)
         {
             try
             {
@@ -342,7 +342,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 }
                 File.Delete(outFileName);
                 Google.Apis.Storage.v1.Data.Object outFileProperties = googleClient.GetObject(_googleBucketName, _backupName);
-                HTTPUtils.Instance.writeBackupHistory(_customerGuid, _backupName, _backupName, (long)outFileProperties.Size, startTimeStamp);
+                HTTPUtils.Instance.writeBackupHistory(_customerGuid, pBaseBackupName, _backupName, (long)outFileProperties.Size, startTimeStamp);
                 //
             }
             catch(Exception ex)

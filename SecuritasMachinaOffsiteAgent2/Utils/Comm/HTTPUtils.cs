@@ -104,7 +104,11 @@ namespace Common.Utils.Comm
             backupHistoryDTO.fileLength = fileLength;
             backupHistoryDTO.newFileName = newFileName;
             backupHistoryDTO.startTimeStamp = startTimeStamp;
-            ServiceBusUtils.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAuthKey, "writeBackupHistory", JsonConvert.SerializeObject(backupHistoryDTO));
+            ServiceBusUtils.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAgentAuthKey, "writeBackupHistory", JsonConvert.SerializeObject(backupHistoryDTO));
+        }
+        public void touchRepoLastBackup(string? guid, RepoDTO? repoDTO)
+        {
+            ServiceBusUtils.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAgentAuthKey, "updateRepoBackupStatus", JsonConvert.SerializeObject(repoDTO));
         }
         public void putCache(string topiccustomerGuid, string messageType, string json)
         {
@@ -133,7 +137,7 @@ namespace Common.Utils.Comm
             try
             {
                 string url = "api/v3/repos/list";
-                ///_client.DefaultRequestHeaders.Add("AuthToken", customerAuthKey);
+                
                 HttpResponseMessage response = _client.GetAsync(url).Result;
                 response.EnsureSuccessStatusCode();
                 ret = response.Content.ReadAsStringAsync().Result;

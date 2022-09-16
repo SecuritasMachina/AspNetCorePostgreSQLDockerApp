@@ -13,7 +13,7 @@ namespace Common.Statics
         public static string? SBConnectionString = "";
        // public static string? topicNamecustomerGuid;
         public static string? passPhrase;
-        public static string? customerAuthKey;
+        public static string? customerAgentAuthKey;
         public static string? authKey;
         public static string? clientSubscriptionName;
         public static string? controllerTopicName;

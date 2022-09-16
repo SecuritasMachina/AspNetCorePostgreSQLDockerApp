@@ -35,21 +35,21 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
 
 
-            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "TRACE", $"Scanning Azure Blob ContainerName:{RunTimeSettings.azureSourceBlobContainerName}");
+            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scanning Azure Blob ContainerName:{RunTimeSettings.azureSourceBlobContainerName}");
             DirListingDTO stagingContainerDirListingDTO1 = Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync()).Result;
             foreach (FileDTO fileDTO in stagingContainerDirListingDTO1.fileDTOs)
             {
                 Thread.Sleep(new Random().Next(250)+(1*1000));
                 if (!ThreadUtils.isInQueue(fileDTO.FileName))
                 {
-                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Queuing {fileDTO.FileName}");
+                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "INFO", $"Queuing {fileDTO.FileName}");
                     // spawn workers for files
-                    BackupWorker backupWorker = new BackupWorker(RunTimeSettings.customerAuthKey, RunTimeSettings.GoogleStorageBucketName, RunTimeSettings.azureBlobEndpoint, RunTimeSettings.azureSourceBlobContainerName, fileDTO.FileName, RunTimeSettings.envPassPhrase);
+                    BackupWorker backupWorker = new BackupWorker(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName, RunTimeSettings.azureBlobEndpoint, RunTimeSettings.azureSourceBlobContainerName, fileDTO.FileName, RunTimeSettings.envPassPhrase);
                     ThreadUtils.addToQueue(backupWorker);
                 }
             }
             if (ThreadUtils.getActiveThreads() > 0)
-                Utils.UpdateOffsiteBytes(RunTimeSettings.customerAuthKey, RunTimeSettings.GoogleStorageBucketName);
+                Utils.UpdateOffsiteBytes(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName);
 
 
 
