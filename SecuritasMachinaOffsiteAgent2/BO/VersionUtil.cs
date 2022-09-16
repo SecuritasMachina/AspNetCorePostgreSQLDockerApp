@@ -10,5 +10,10 @@
             string displayableVersion = $"{version} ({buildDate.ToString("yyyy-MM-dd HH:mm:ss")})";
             return displayableVersion;
         }
+        public static string getAppName()
+        {
+            return System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+            
+        }
     }
 }

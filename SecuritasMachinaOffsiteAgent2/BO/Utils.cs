@@ -1,6 +1,7 @@
 ﻿using Azure;
 using Azure.Storage.Blobs.Models;
 using Common.DTO.V2;
+using Common.Statics;
 using Common.Utils.Comm;
 using Google.Apis.Download;
 using Google.Apis.Upload;
@@ -310,8 +311,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 numOutputLines++;
 
                 // Add the text to the collected output.
-                cmdOutput.Append(Environment.NewLine +
-                    $"[{numOutputLines}] - {outLine.Data}");
+                //cmdOutput.Append(Environment.NewLine +
+                 //   $"[{numOutputLines}] - {outLine.Data}");
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "TRACE", $"[{numOutputLines}] - {outLine.Data}");
             }
         }
         private static void ShellOutputDataReceived(object sendingProcess,
@@ -323,8 +325,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 numOutputLines++;
 
                 // Add the text to the collected output.
-                cmdOutput.Append(Environment.NewLine +
-                    $"[{numOutputLines}] - {outLine.Data}");
+                //cmdOutput.Append(Environment.NewLine +
+               //     $"[{numOutputLines}] - {outLine.Data}");
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "TRACE", $"[{numOutputLines}] - {outLine.Data}");
             }
         }
 

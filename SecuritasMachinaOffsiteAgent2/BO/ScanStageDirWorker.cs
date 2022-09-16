@@ -39,18 +39,16 @@ namespace SecuritasMachinaOffsiteAgent.BO
             DirListingDTO stagingContainerDirListingDTO1 = Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync()).Result;
             foreach (FileDTO fileDTO in stagingContainerDirListingDTO1.fileDTOs)
             {
-                Thread.Sleep(new Random().Next(250)+(1*1000));
+                Thread.Sleep(new Random().Next(250)+(1000));
                 if (!ThreadUtils.isInQueue(fileDTO.FileName))
                 {
                     HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "INFO", $"Queuing {fileDTO.FileName}");
                     // spawn workers for files
                     BackupWorker backupWorker = new BackupWorker(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName, RunTimeSettings.azureBlobEndpoint, RunTimeSettings.azureSourceBlobContainerName, fileDTO.FileName, RunTimeSettings.envPassPhrase);
-                    ThreadUtils.addToQueue(backupWorker);
+                    ThreadUtils.addToBackupWorkerQueue(backupWorker);
                 }
             }
-            if (ThreadUtils.getActiveThreads() > 0)
-                Utils.UpdateOffsiteBytes(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName);
-
+            
 
 
             //ServiceBusUtils.postMsg2ControllerAsync("agent/status", RunTimeSettings.topicCustomerGuid, "status", JsonConvert.SerializeObject(statusDTO));

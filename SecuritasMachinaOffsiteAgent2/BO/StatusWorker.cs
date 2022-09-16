@@ -43,7 +43,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             DirListingDTO restoredListingDTO = Utils.doDirListingAsync(restoredContainerName.GetBlobsAsync()).Result;
 
             StatusDTO statusDTO = new StatusDTO();
-            statusDTO.activeJobs = ThreadUtils.getActiveThreads();
+            //statusDTO.activeJobs = ThreadUtils.getActiveThreads();
             statusDTO.activeThreads = (long)Process.GetCurrentProcess().Threads.Count;
             statusDTO.UserProcessorTime = Process.GetCurrentProcess().UserProcessorTime.Ticks;
             statusDTO.TotalProcessorTime = Process.GetCurrentProcess().TotalProcessorTime.Ticks;

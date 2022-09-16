@@ -1,4 +1,5 @@
 ﻿using Common.Statics;
+using Common.Utils.Comm;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -13,27 +14,28 @@ namespace SecuritasMachinaOffsiteAgent.BO
     {
 
         //private static int maxThreads = 1;
-        static ConcurrentDictionary<string, BackupWorker> dt = new ConcurrentDictionary<string, BackupWorker>();
+        static ConcurrentDictionary<string, BackupWorker> dtBackupWorker = new ConcurrentDictionary<string, BackupWorker>();
+        static ConcurrentDictionary<string, GitHubArchiveWorker> dtGitHubWorker = new ConcurrentDictionary<string, GitHubArchiveWorker>();
 
         internal static void deleteFromQueue(string key)
         {
             BackupWorker tmp = null;
-            // BackupWorker tmp = dt.TryGetValue(key);
-            bool v = dt.TryRemove(key, out tmp);
+
+            bool v = dtBackupWorker.TryRemove(key, out tmp);
         }
         internal static bool isInQueue(string pBackupWorkerName)
         {
             bool ret = true;
-            if (!dt.ContainsKey(pBackupWorkerName))
+            if (!dtBackupWorker.ContainsKey(pBackupWorkerName))
             {
                 ret = false;
             }
 
             return ret;
         }
-        internal static void addToQueue(BackupWorker backupWorker)
+        internal static void addToBackupWorkerQueue(BackupWorker backupWorker)
         {
-            if (dt.ContainsKey(backupWorker.ToString()))
+            if (dtBackupWorker.ContainsKey(backupWorker.ToString()))
             {
                 Console.WriteLine("Already have " + backupWorker.ToString());
             }
@@ -41,20 +43,21 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
                 DateTime start = DateTime.Now;
                 TimeSpan timeDiff = DateTime.Now - start;
-                while (getActiveThreads() >= RunTimeSettings.MaxThreads && timeDiff.Hours < 1)
+                while (dtBackupWorker.Count >= RunTimeSettings.MaxThreads && timeDiff.Hours < 1)
                 {
                     Thread.Sleep(5 * 1000);
                     timeDiff = DateTime.Now - start;
 
                 }
                 string backWorkerName = backupWorker.ToString();
-                if (!dt.ContainsKey(backWorkerName))
+                if (!dtBackupWorker.ContainsKey(backWorkerName))
                 {
-                    dt.TryAdd(backWorkerName, backupWorker);
+                    dtBackupWorker.TryAdd(backWorkerName, backupWorker);
                     ThreadPool.QueueUserWorkItem(async x =>
                     {
                         await backupWorker.StartAsync();
-                        deleteFromQueue(backWorkerName);
+                        BackupWorker tmp = null;
+                        bool v = dtBackupWorker.TryRemove(backWorkerName, out tmp);
                         Thread.Sleep(100);
                         // countdownEvent.Signal();
                     });
@@ -62,10 +65,53 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             }
         }
-
-        internal static long getActiveThreads()
+        internal static void addToGitHubWorkerQueue(GitHubArchiveWorker backupWorker)
         {
-            return dt.Count;
+
+            DateTime start = DateTime.Now;
+            TimeSpan timeDiff = DateTime.Now - start;
+            while (dtGitHubWorker.Values.ToList().Count >= RunTimeSettings.MaxThreads && timeDiff.Hours < 1)
+            {
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Throttling Threads {RunTimeSettings.MaxThreads}");
+                foreach (var worker in dtGitHubWorker.Values)
+                {
+                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Active Thread: {worker.ToString()}");
+                }
+                Thread.Sleep(5 * 1000);
+                timeDiff = DateTime.Now - start;
+                
+            }
+            string backWorkerName = backupWorker.ToString();
+            if (!dtGitHubWorker.ContainsKey(backWorkerName))
+            {
+                bool addSuccess=dtGitHubWorker.TryAdd(backWorkerName, backupWorker);
+                if (addSuccess)
+                {
+                    ThreadPool.QueueUserWorkItem(async x =>
+                    {
+                        await backupWorker.StartAsync();
+                        GitHubArchiveWorker tmp = null;
+                        bool v = dtGitHubWorker.TryRemove(backWorkerName, out tmp);
+                        if (!v)
+                        {
+                            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Remove failed for Thread : {backWorkerName}");
+                        }
+
+                        Thread.Sleep(100);
+                    });
+                }
+                else
+                {
+                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Add to dictionary failed for Thread : {backWorkerName}");
+                }
+            }
+            else
+            {
+                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Already have {backWorkerName}");
+            }
+
+
         }
+
     }
 }
