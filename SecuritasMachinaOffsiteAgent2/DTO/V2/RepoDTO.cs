@@ -13,5 +13,6 @@ namespace SecuritasMachinaOffsiteAgent.DTO.V2
         public string Url { get; set; }
         public long Size { get; set; }
         public long UpdatedAt { get; set; }
+        public string backupFrequency { get; set; }
     }
 }

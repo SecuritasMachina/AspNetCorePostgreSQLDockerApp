@@ -100,6 +100,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 //StorageClient googleClient = StorageClient.Create();
                 //Check filelengths, make sure they match? or are reasonable
                 //Delete bacpac file on Azure 
+                
                 blobClient.Delete();
                 FileDTO fileDTO = new FileDTO();
                 fileDTO.FileName = _backupName;

@@ -5,6 +5,7 @@ using Common.Utils.Comm;
 using Google.Apis.Download;
 using Google.Apis.Upload;
 using Google.Cloud.Storage.V1;
+using Microsoft.Azure.Amqp.Framing;
 using Newtonsoft.Json;
 using SecuritasMachinaOffsiteAgent.DTO.V2;
 using SecuritasMachinaOffsiteAgent.Utils.Comm.GoogleAPI;
@@ -13,14 +14,17 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Pipes;
 using System.Reflection.Metadata;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using static System.Net.WebRequestMethods;
+using File = System.IO.File;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
     public class Utils
     {
+        private static StringBuilder cmdOutput = null;
         public static String BytesToString(long byteCount)
         {
             string[] suf = { "B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB" }; //Longs run out around EB
@@ -117,14 +121,16 @@ namespace SecuritasMachinaOffsiteAgent.BO
             //generate random salt
             try
             {
+                if (String.IsNullOrEmpty(password))
+                    password = "AES_EncryptStreamAES_Encrypt2StreamAES_EncryptStreamAES_EncryptStreamAES_EncryptStream";
                 password = password.Substring(0, 32);
                 StorageClient googleClient = StorageClient.Create();
                 byte[] salt = GenerateRandomSalt();
 
-               
+
                 using (Aes aesAlg = Aes.Create())
                 {
-                    
+
 
                     // Create the streams used for encryption.
                     using (pInStream)
@@ -186,13 +192,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
                 //byte[] passwordBytes = Encoding.UTF8.GetBytes(password);
                 password = password.Substring(0, 32);
-               
+
                 StorageClient googleClient = StorageClient.Create();
-                
+
                 DownloadObjectOptions downloadObjectOptions = new DownloadObjectOptions();
                 EncryptionKey encryptionKey = EncryptionKey.Create(Encoding.UTF8.GetBytes(password));
                 downloadObjectOptions.EncryptionKey = encryptionKey;
-                
+
                 DateTime start = DateTime.Now;
                 var progress = new Progress<IDownloadProgress>(
                    p =>
@@ -204,7 +210,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                            start = DateTime.Now;
                            int percentComplete = (int)Math.Round((double)(100 * p.BytesDownloaded) / (double)pContentLength);
                            HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pFileToRestore} is {percentComplete}% complete");
-                           
+
                        }
                    }
                 );
@@ -236,6 +242,115 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 HTTPUtils.Instance.writeToLog(customerGuid, "ERROR", pGoogleBucketName + " DailyUpdateWorker:" + ex.ToString());
 
             }
+        }
+        public static int ShellExec(String workingDir, String command)
+        {
+            Console.WriteLine(command);
+            ProcessStartInfo info;
+            cmdOutput = new StringBuilder();
+            // Style = ProgressBarStyle.Marquee;
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                info = new ProcessStartInfo
+                {
+                    UseShellExecute = false,
+                    LoadUserProfile = true,
+                    ErrorDialog = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    RedirectStandardOutput = true,
+                    StandardOutputEncoding = Encoding.UTF8,
+                    RedirectStandardError = true,
+                    StandardErrorEncoding = Encoding.UTF8,
+                    WorkingDirectory = workingDir,
+                    FileName = "bash",
+                    Arguments = "/k " + command
+                };
+            }
+            else
+            {
+                info = new ProcessStartInfo
+                {
+                    UseShellExecute = false,
+                    LoadUserProfile = true,
+                    ErrorDialog = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    RedirectStandardOutput = true,
+                    StandardOutputEncoding = Encoding.UTF8,
+                    RedirectStandardError = true,
+                    StandardErrorEncoding = Encoding.UTF8,
+                    WorkingDirectory = workingDir,
+                    FileName = "cmd.exe",
+                    Arguments = "/c " + command
+                };
+
+            }
+
+            Process shell = new Process();
+            shell.StartInfo = info;
+            shell.EnableRaisingEvents = true;
+            shell.ErrorDataReceived += new DataReceivedEventHandler(ShellErrorDataReceived);
+            shell.OutputDataReceived += new DataReceivedEventHandler(ShellOutputDataReceived);
+
+            shell.Start();
+            shell.BeginErrorReadLine();
+            shell.BeginOutputReadLine();
+            shell.WaitForExit();
+
+            return shell.ExitCode;
+        }
+        static int numOutputLines = 0;
+        private static void ShellErrorDataReceived(object sendingProcess,
+           DataReceivedEventArgs outLine)
+        {
+            // Collect the sort command output.
+            if (!String.IsNullOrEmpty(outLine.Data))
+            {
+                numOutputLines++;
+
+                // Add the text to the collected output.
+                cmdOutput.Append(Environment.NewLine +
+                    $"[{numOutputLines}] - {outLine.Data}");
+            }
+        }
+        private static void ShellOutputDataReceived(object sendingProcess,
+           DataReceivedEventArgs outLine)
+        {
+            // Collect the sort command output.
+            if (!String.IsNullOrEmpty(outLine.Data))
+            {
+                numOutputLines++;
+
+                // Add the text to the collected output.
+                cmdOutput.Append(Environment.NewLine +
+                    $"[{numOutputLines}] - {outLine.Data}");
+            }
+        }
+
+        internal static void writeFileToGoogle(string _customerGuid, string contentType, string _googleBucketName, string outFileName, string _passPhrase)
+        {
+            try
+            {
+                long startTimeStamp = new DateTimeOffset(DateTime.UtcNow).ToUniversalTime().ToUnixTimeMilliseconds();
+                long fileLength = new System.IO.FileInfo(outFileName).Length;
+                string _backupName = new System.IO.FileInfo(outFileName).Name;
+                StorageClient googleClient = StorageClient.Create();
+                using (var inStream = System.IO.File.OpenRead(outFileName))
+                {
+                    new Utils().AES_EncryptStream(_customerGuid, inStream, contentType, _googleBucketName, _backupName, fileLength, _backupName, _passPhrase);
+                }
+                File.Delete(outFileName);
+                Google.Apis.Storage.v1.Data.Object outFileProperties = googleClient.GetObject(_googleBucketName, _backupName);
+                HTTPUtils.Instance.writeBackupHistory(_customerGuid, _backupName, _backupName, (long)outFileProperties.Size, startTimeStamp);
+                //
+            }
+            catch(Exception ex)
+            {
+
+            }
+            
+            //throw new NotImplementedException();
         }
     }
 }

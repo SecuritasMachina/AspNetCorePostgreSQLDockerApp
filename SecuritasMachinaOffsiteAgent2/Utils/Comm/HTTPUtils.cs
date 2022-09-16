@@ -112,7 +112,35 @@ namespace Common.Utils.Comm
             ServiceBusUtils.postMsg2ControllerAsync("agent/putCache", topiccustomerGuid, messageType, json);
         }
 
+        internal string getCache(string? customerAuthKey, string v)
+        {
+            string ret = null;
+            try
+            {
+                string url = "api/v3/getCache/" + Uri.EscapeDataString(v);
+                //_client.DefaultRequestHeaders.Add("AuthToken", customerAuthKey);
+                HttpResponseMessage response = _client.GetAsync(url).Result;
+                response.EnsureSuccessStatusCode();
+                ret = response.Content.ReadAsStringAsync().Result;
+            }
+            catch (Exception ignore) { }
+            return ret;
+        }
 
+        internal string getRepoList(string customerAuthKey)
+        {
+            string ret = null;
+            try
+            {
+                string url = "api/v3/repos/list";
+                ///_client.DefaultRequestHeaders.Add("AuthToken", customerAuthKey);
+                HttpResponseMessage response = _client.GetAsync(url).Result;
+                response.EnsureSuccessStatusCode();
+                ret = response.Content.ReadAsStringAsync().Result;
+            }
+            catch (Exception ignore) { }
+            return ret;
+        }
     }
 }
 

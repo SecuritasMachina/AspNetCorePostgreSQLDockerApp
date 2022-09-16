@@ -98,8 +98,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 Environment.Exit(1);
             }
 
-            // Create the client object that will be used to create sender and receiver objects
-            client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
+            
             try
             {
                 Console.Write("Testing writing to Google Storage Bucket Name: " + RunTimeSettings.GoogleStorageBucketName);
@@ -183,6 +182,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             try
             {
+                // Create the client object that will be used to create sender and receiver objects
+                client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
                 // create a processor that we can use to process the messages
                 HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAuthKey, "INFO", $"Starting Listener on {RunTimeSettings.customerAuthKey}");
                 processor = client.CreateProcessor(RunTimeSettings.serviceBusTopic, RunTimeSettings.clientSubscriptionName, new ServiceBusProcessorOptions());
@@ -270,7 +271,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         }
         private void scanGitHubWorkerTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
-            ScanGitHubWorker scanGitHubWorker = new ScanGitHubWorker(RunTimeSettings.GITHUB_PAT_Token, RunTimeSettings.GITHUB_OrgName);
+            ScanGitHubWorker scanGitHubWorker = new ScanGitHubWorker(RunTimeSettings.GITHUB_PAT_Token, RunTimeSettings.GITHUB_OrgName, RunTimeSettings.customerAuthKey, RunTimeSettings.GoogleStorageBucketName);
             scanGitHubWorker.StartAsync();
         }
         
