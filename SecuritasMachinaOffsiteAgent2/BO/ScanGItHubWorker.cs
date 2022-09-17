@@ -62,7 +62,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     genericMessage.msg = JsonConvert.SerializeObject(repoDTOs);
                     genericMessage.guid = RunTimeSettings.customerAgentAuthKey;
                     HTTPUtils.Instance.putCache(RunTimeSettings.customerAgentAuthKey, "REPOLIST", JsonConvert.SerializeObject(genericMessage));
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Found {repoDTOs.Count} Repositories");
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Found {repoDTOs.Count} Repositories @ {RunTimeSettings.GITHUB_OrgName}");
 
 
                 }
@@ -135,7 +135,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                     continue;
                                 }
 
-                                if (totalMinLeft >= 0 && nextRunJobspan.TotalMinutes < .5)
+                                if (nextRunJobspan.TotalMinutes < .5)
                                 {
 
                                     //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"loading {repo.FullName} nextRunJobspan.TotalMinutes:{nextRunJobspan.TotalMinutes}");
@@ -143,11 +143,15 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                     if (!ThreadUtilsV2.Instance.isGitWorkerInQueue(repo.FullName))
                                     {
                                         GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker(this.GITHUB_PAT_Token, this.GITHUB_OrgName, this.customerGuid, this.googleBucketName, repo);
-                                        repoListRefreshTime = DateTime.Now;
-                                        repo.lastSyncDate = DateTime.Now;
+                                        
+                                        
 
                                         bool success = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
-
+                                        if (success)
+                                        {
+                                            repoListRefreshTime = DateTime.Now;
+                                            repo.lastSyncDate = DateTime.Now;
+                                        }
                                         if (!queuedSuccess)
                                             queuedSuccess = success;
                                         //Thread.Sleep(50);
