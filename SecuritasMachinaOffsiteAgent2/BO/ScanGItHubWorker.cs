@@ -54,7 +54,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 HTTPUtils.Instance.putCache(RunTimeSettings.customerAgentAuthKey, "REPOLIST", JsonConvert.SerializeObject(genericMessage));
 
 
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "TRACE", $"{repoDTOs.Count} Repositories Found");
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"{repoDTOs.Count} Repositories Found");
 
                 string genericMsg = HTTPUtils.Instance.getRepoList(RunTimeSettings.customerAgentAuthKey);
                 if (!String.IsNullOrEmpty(genericMsg))
@@ -70,7 +70,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "ERROR", $"ScanGitHubWorker {ex.ToString()}");
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"ScanGitHubWorker {ex.ToString()}");
             }
 
         }

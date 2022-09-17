@@ -50,7 +50,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             try
             {
                 
-                HTTPUtils.Instance.writeToLog(authToken, "RESTORE-START", "Starting Restore for:" + _restoreName);
+                HTTPUtils.Instance.writeToLogAsync(authToken, "RESTORE-START", "Starting Restore for:" + _restoreName);
                 FileDTO fileDTO = new FileDTO();
                 fileDTO.FileName = _restoreName;
                 fileDTO.Status = "InProgress";
@@ -78,14 +78,14 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     if (blockBlobClient.Exists())
                     {
 
-                        HTTPUtils.Instance.writeToLog(authToken, "INFO", $"{restoreFileName} exists in {_azureBlobRestoreContainerName}, retrying as {baseRestoreName + "-" + generationCount}");
+                        HTTPUtils.Instance.writeToLogAsync(authToken, "INFO", $"{restoreFileName} exists in {_azureBlobRestoreContainerName}, retrying as {baseRestoreName + "-" + generationCount}");
                         restoreFileName = baseRestoreName + "-" + generationCount;
                         blockBlobClient = containerClient.GetBlobClient(restoreFileName);
                         generationCount++;
                     }
                     else
                     {
-                        HTTPUtils.Instance.writeToLog(authToken, "INFO", $"Writing as {restoreFileName} in {_azureBlobRestoreContainerName}");
+                        HTTPUtils.Instance.writeToLogAsync(authToken, "INFO", $"Writing as {restoreFileName} in {_azureBlobRestoreContainerName}");
                         break;
                     }
                 }
@@ -113,12 +113,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 
 
                 HTTPUtils.Instance.putCache(authToken, _restoreName + "-" + genericMessage2.msgType, JsonConvert.SerializeObject(genericMessage2));
-                HTTPUtils.Instance.writeToLog(authToken, "RESTORE-END", $"Restore Completed for {_restoreName} restored as {restoreFileName}");
+                HTTPUtils.Instance.writeToLogAsync(authToken, "RESTORE-END", $"Restore Completed for {_restoreName} restored as {restoreFileName}");
 
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(this.authToken, "ERROR", _restoreName + " " + ex.ToString());
+                HTTPUtils.Instance.writeToLogAsync(this.authToken, "ERROR", _restoreName + " " + ex.ToString());
                 // Console.WriteLine();
 
             }

@@ -148,7 +148,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                  if (result >= 1)
                                  {
                                      int percentComplete = (int)Math.Round((double)(100 * p.BytesSent) / (double)pContentLength);
-                                     HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pBaseFileName} is {percentComplete}% complete");
+                                     HTTPUtils.Instance.writeToLogAsync(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pBaseFileName} is {percentComplete}% complete");
                                      start = DateTime.Now;
                                  }
                              }
@@ -166,12 +166,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 if (ex.ToString().ToLower().IndexOf("BlobNotFound".ToLower()) > 0)
                 {
                     string msg = $"{pBaseFileName} disappeared before it could be read, is there another agent running?";
-                    HTTPUtils.Instance.writeToLog(pCustomerGuid, "INFO", msg);
+                    HTTPUtils.Instance.writeToLogAsync(pCustomerGuid, "INFO", msg);
                     return;
                 }
                 else
                 {
-                    HTTPUtils.Instance.writeToLog(pCustomerGuid, "ERROR", pBaseFileName + " " + ex.ToString());
+                    HTTPUtils.Instance.writeToLogAsync(pCustomerGuid, "ERROR", pBaseFileName + " " + ex.ToString());
                 }
 
             }
@@ -179,7 +179,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
 
 
-                HTTPUtils.Instance.writeToLog(pCustomerGuid, "ERROR", pBaseFileName + " " + ex.ToString());
+                HTTPUtils.Instance.writeToLogAsync(pCustomerGuid, "ERROR", pBaseFileName + " " + ex.ToString());
                 throw (ex);
             }
 
@@ -210,7 +210,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                        {
                            start = DateTime.Now;
                            int percentComplete = (int)Math.Round((double)(100 * p.BytesDownloaded) / (double)pContentLength);
-                           HTTPUtils.Instance.writeToLog(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pFileToRestore} is {percentComplete}% complete");
+                           HTTPUtils.Instance.writeToLogAsync(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pFileToRestore} is {percentComplete}% complete");
 
                        }
                    }
@@ -224,7 +224,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         internal static void UpdateOffsiteBytes(string customerGuid, string pGoogleBucketName)
         {
-            HTTPUtils.Instance.writeToLog(customerGuid, "TRACE", $"Scanning Google Storage Bucket {pGoogleBucketName}");
+            HTTPUtils.Instance.writeToLogAsync(customerGuid, "TRACE", $"Scanning Google Storage Bucket {pGoogleBucketName}");
             DirListingDTO dirlistingDTO = CloudUtils.Instance.listFiles(pGoogleBucketName);
 
             long? tsize = 0;
@@ -235,12 +235,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     tsize += file.length;
 
                 }
-                HTTPUtils.Instance.writeToLog(customerGuid, "TOTALOFFSITEBYTES", $"{tsize}");
-                HTTPUtils.Instance.writeToLog(customerGuid, "TOTALOFFSITECOUNT", $"{dirlistingDTO.fileDTOs.Count}");
+                HTTPUtils.Instance.writeToLogAsync(customerGuid, "TOTALOFFSITEBYTES", $"{tsize}");
+                HTTPUtils.Instance.writeToLogAsync(customerGuid, "TOTALOFFSITECOUNT", $"{dirlistingDTO.fileDTOs.Count}");
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(customerGuid, "ERROR", pGoogleBucketName + " DailyUpdateWorker:" + ex.ToString());
+                HTTPUtils.Instance.writeToLogAsync(customerGuid, "ERROR", pGoogleBucketName + " DailyUpdateWorker:" + ex.ToString());
 
             }
         }
@@ -313,7 +313,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 // Add the text to the collected output.
                 //cmdOutput.Append(Environment.NewLine +
                  //   $"[{numOutputLines}] - {outLine.Data}");
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "TRACE", $"[{numOutputLines}] - {outLine.Data}");
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"[{numOutputLines}] - {outLine.Data}");
             }
         }
         private static void ShellOutputDataReceived(object sendingProcess,
@@ -327,7 +327,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 // Add the text to the collected output.
                 //cmdOutput.Append(Environment.NewLine +
                //     $"[{numOutputLines}] - {outLine.Data}");
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "TRACE", $"[{numOutputLines}] - {outLine.Data}");
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"[{numOutputLines}] - {outLine.Data}");
             }
         }
 

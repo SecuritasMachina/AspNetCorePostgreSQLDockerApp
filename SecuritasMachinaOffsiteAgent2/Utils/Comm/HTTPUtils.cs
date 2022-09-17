@@ -89,10 +89,10 @@ namespace Common.Utils.Comm
             }
         }
 
-        public void writeToLog(string? pAuthKey, string? messageType, string? json)
+        public async Task writeToLogAsync(string? pAuthKey, string? messageType, string? json)
         {
            
-            ServiceBusUtils.postMsg2ControllerAsync("agent/logs", pAuthKey, messageType, json);
+            await ServiceBusUtils.postMsg2ControllerAsync("agent/logs", pAuthKey, messageType, json);
         }
         public void writeBackupHistory(string? guid, string? backupFile, string newFileName, long fileLength, long startTimeStamp)
         {

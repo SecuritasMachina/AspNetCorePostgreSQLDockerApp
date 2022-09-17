@@ -47,7 +47,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ignore)
             {
-                RunTimeSettings.MaxThreads = 5;
+                RunTimeSettings.MaxThreads = 3;
 
             }
 
@@ -91,7 +91,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
 
             HTTPUtils.Instance.populateRuntime(RunTimeSettings.customerAgentAuthKey);
-            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "CONFIGINFO", $"azureBlobEndpoint length: {RunTimeSettings.azureBlobEndpoint.Length} azureBlobContainerName:{RunTimeSettings.azureSourceBlobContainerName} azureBlobRestoreContainerName:{RunTimeSettings.azureBlobRestoreContainerName} GoogleStorageBucketName: {RunTimeSettings.GoogleStorageBucketName} RetentionDays:{RunTimeSettings.RetentionDays} MaxThreads: {RunTimeSettings.MaxThreads} encryptionPassPhrase Length: {RunTimeSettings.envPassPhrase.Length}");
+            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "CONFIGINFO", $"azureBlobEndpoint length: {RunTimeSettings.azureBlobEndpoint.Length} azureBlobContainerName:{RunTimeSettings.azureSourceBlobContainerName} azureBlobRestoreContainerName:{RunTimeSettings.azureBlobRestoreContainerName} GoogleStorageBucketName: {RunTimeSettings.GoogleStorageBucketName} RetentionDays:{RunTimeSettings.RetentionDays} MaxThreads: {RunTimeSettings.MaxThreads} encryptionPassPhrase Length: {RunTimeSettings.envPassPhrase.Length}");
             if (RunTimeSettings.SBConnectionString == null || RunTimeSettings.SBConnectionString.Length == 0)
             {
                 Console.WriteLine("!!! Unable to retrieve configuration !!!");
@@ -113,7 +113,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Error writing to {RunTimeSettings.GoogleStorageBucketName} - Ensure service account has Storage Object Creator and Viewer to cloud bucket {ex.ToString()}");
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Error writing to {RunTimeSettings.GoogleStorageBucketName} - Ensure service account has Storage Object Creator and Viewer to cloud bucket {ex.ToString()}");
                 Console.WriteLine($"Error writing from {RunTimeSettings.GoogleStorageBucketName} - Ensure service account has Storage Object Creator and Viewer to cloud bucket");
             }
 
@@ -135,7 +135,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Error reading from {RunTimeSettings.GoogleStorageBucketName} - Ensure service account has Storage Object Creator and Viewer to cloud bucket {ex.ToString()}");
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Error reading from {RunTimeSettings.GoogleStorageBucketName} - Ensure service account has Storage Object Creator and Viewer to cloud bucket {ex.ToString()}");
                 Console.WriteLine($"Error reading from {RunTimeSettings.GoogleStorageBucketName} - Ensure service account has Storage Object Creator and Viewer to cloud bucket");
             }
 
@@ -153,7 +153,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Error deleting file at {RunTimeSettings.GoogleStorageBucketName} - Ensure service account has Storage Object Creator and Viewer to cloud bucket {ex.ToString()}");
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Error deleting file at {RunTimeSettings.GoogleStorageBucketName} - Ensure service account has Storage Object Creator and Viewer to cloud bucket {ex.ToString()}");
                 Console.WriteLine($"Error deleting file at {RunTimeSettings.GoogleStorageBucketName} - Ensure service account has Storage Object Creator and Viewer to cloud bucket");
             }
             //TODO test dir listing of blob container
@@ -174,7 +174,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             catch (Exception ex)
             {
 
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "ERROR", "...Error listing at " + RunTimeSettings.azureBlobEndpoint + " " + RunTimeSettings.azureSourceBlobContainerName + " - Ensure VM instance has FULL access to Azure cloud storage " + ex.ToString());
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", "...Error listing at " + RunTimeSettings.azureBlobEndpoint + " " + RunTimeSettings.azureSourceBlobContainerName + " - Ensure VM instance has FULL access to Azure cloud storage " + ex.ToString());
 
             }
 
@@ -185,7 +185,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 // Create the client object that will be used to create sender and receiver objects
                 client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
                 // create a processor that we can use to process the messages
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "INFO", $"Starting Listener on {RunTimeSettings.customerAgentAuthKey}");
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Starting Listener on {RunTimeSettings.customerAgentAuthKey}");
                 processor = client.CreateProcessor(RunTimeSettings.serviceBusTopic, RunTimeSettings.clientSubscriptionName, new ServiceBusProcessorOptions());
 
                 // Console.WriteLine("Listening");
@@ -197,7 +197,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 // start processing 
                 await processor.StartProcessingAsync();
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "INFO", $"Listening on {RunTimeSettings.customerAgentAuthKey}");
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Listening on {RunTimeSettings.customerAgentAuthKey}");
                 //Start up background jobs
                 int maxRandomWait = 2000;
                 Thread.Sleep(new Random().Next(maxRandomWait));
@@ -209,7 +209,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     scanGitHubWorkerTimer.Interval = (1000 * 60) + (new Random().Next(maxRandomWait));
                     scanGitHubWorkerTimer.Elapsed += scanGitHubWorkerTimedEvent;
                     scanGitHubWorkerTimer.AutoReset = true; scanGitHubWorkerTimer.Enabled = true;
-                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started GitHub scan worker");
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started GitHub scan worker");
 
                 }
                 else
@@ -224,25 +224,25 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                     archiveWorkerTimer.Elapsed += archiveWorkerOnTimedEvent;
                     archiveWorkerTimer.AutoReset = true; archiveWorkerTimer.Enabled = true;
-                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Delete files worker for {RunTimeSettings.GoogleStorageBucketName}");
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Delete files worker for {RunTimeSettings.GoogleStorageBucketName}");
                     Thread.Sleep(new Random().Next(maxRandomWait));
                     Timer statusWorkerTimer = new Timer();
                     statusWorkerTimer.Interval = (1000 * 60 * 1) + (new Random().Next(maxRandomWait));
                     statusWorkerTimer.Elapsed += statusWorkerOnTimedEvent;
                     statusWorkerTimer.AutoReset = true; statusWorkerTimer.Enabled = true;
-                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Status worker");
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Status worker");
                     Thread.Sleep(new Random().Next(maxRandomWait));
                     Timer offSiteWorkerTimer = new Timer();
                     offSiteWorkerTimer.Interval = (1000 * 60 * 10) + (new Random().Next(maxRandomWait));
                     offSiteWorkerTimer.Elapsed += offsiteWorkerOnTimedEvent;
                     offSiteWorkerTimer.AutoReset = true; offSiteWorkerTimer.Enabled = true;
-                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started OffSite Status worker for {RunTimeSettings.GoogleStorageBucketName}");
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started OffSite Status worker for {RunTimeSettings.GoogleStorageBucketName}");
                     Thread.Sleep(new Random().Next(maxRandomWait));
                     Timer scanStageWorkerTimer = new Timer();
                     scanStageWorkerTimer.Interval = (1000 * 60 * 1) + (new Random().Next(maxRandomWait));
                     scanStageWorkerTimer.Elapsed += scanStageWorkerOnTimedEvent;
                     scanStageWorkerTimer.AutoReset = true; scanStageWorkerTimer.Enabled = true;
-                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Scan for Files worker for container {RunTimeSettings.azureSourceBlobContainerName}");
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Scan for Files worker for container {RunTimeSettings.azureSourceBlobContainerName}");
 
                 }
 
@@ -307,7 +307,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 string passPhrase = "";
 
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Agent Received msgType:{msgType} genericMessage.ssg:{genericMessage.msg.Length}");
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Agent Received msgType:{msgType} genericMessage.ssg:{genericMessage.msg.Length}");
 
                 //Console.WriteLine($"Received: {body}");
                 if (msgType == "restoreFile")
@@ -321,7 +321,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 }
                 else if (msgType == "backupComplete")
                 {
-                    HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "INFO", $"{msgObj.backupName} Backup Complete");
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"{msgObj.backupName} Backup Complete");
                     //   Utils.doDirListing(RunTimeSettings.topicCustomerGuid, mountedDir);
                 }
                 else if (msgType == "DirList")
@@ -342,7 +342,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage2.msg = ex.Message.ToString();
                 genericMessage2.guid = RunTimeSettings.customerAgentAuthKey;
 
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "ERROR", "ListenerWorker:" + ex.Message.ToString());
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", "ListenerWorker:" + ex.Message.ToString());
             }
             // complete the message. message is deleted from the queue. 
             await args.CompleteMessageAsync(args.Message);

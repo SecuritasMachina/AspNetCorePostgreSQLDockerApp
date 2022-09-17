@@ -55,9 +55,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         return;
 
 
-                    var github = new GitHubClient(new ProductHeaderValue($"SecuritasMachina_Agent_{VersionUtil.getAppName()}")); // TODO: other setup
-                    var tokenAuth = new Credentials(GITHUB_PAT_Token); // NOTE: not real token
-                    github.Credentials = tokenAuth;
+                   // var github = new GitHubClient(new ProductHeaderValue($"SecuritasMachina_Agent_{VersionUtil.getAppName()}")); // TODO: other setup
+                    ///var tokenAuth = new Credentials(GITHUB_PAT_Token); // NOTE: not real token
+                    //github.Credentials = tokenAuth;
 
                     //Clone, then zip and store in google
                     string path = $"/mnt/offsite/Repos/{repo.FullName}";
@@ -65,19 +65,19 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     int retVal = 0;
                     if (!Directory.Exists(path))
                     {
-                        HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Cloning {repo.Url}");
+                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Cloning {repo.Url}");
                         di = Directory.CreateDirectory(path);
                         String command = @"git clone --mirror " + repo.Url + " " + path;
                         retVal = Utils.ShellExec(path, command);
                         if(retVal != 0)
-                            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Error {retVal} while Cloning {repo.Url}");
+                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Error {retVal} while Cloning {repo.Url}");
                     }
                     else
                     {
-                        HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Syncing {repo.Url}");
+                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Syncing {repo.Url}");
                         retVal = Utils.ShellExec(path, "git fetch origin");
                         if (retVal != 0)
-                            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Error {retVal} while Syncing {repo.Url}");
+                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Error {retVal} while Syncing {repo.Url}");
                     }
 
                     if (retVal != 0)
@@ -113,7 +113,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                         Utils.writeFileToGoogle(RunTimeSettings.customerAgentAuthKey, "application/zip", googleBucketName, basebackupName + ".zip", zipName, RunTimeSettings.envPassPhrase);
                         HTTPUtils.Instance.touchRepoLastBackup(RunTimeSettings.customerAgentAuthKey, repo);
-                        HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "BACKUP-END", "Completed encryption, synced and archived : " + basebackupName);
+                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "BACKUP-END", "Completed encryption, synced and archived : " + basebackupName);
 
 
 
@@ -126,7 +126,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "ERROR", $"GitHubArchiveWorker {ex.ToString()}");
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"GitHubArchiveWorker {ex.ToString()}");
             }
 
         }

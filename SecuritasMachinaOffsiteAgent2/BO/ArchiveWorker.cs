@@ -27,7 +27,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         
             DateTime purgeOlderDate = DateTime.Now.AddDays(retentionDays * -1);
 
-            HTTPUtils.Instance.writeToLog(this.authtoken, "INFO", $"Scanning {googleBucketName} for Last Write Time over {retentionDays} days old ({purgeOlderDate.ToShortDateString()})");
+            HTTPUtils.Instance.writeToLogAsync(this.authtoken, "INFO", $"Scanning {googleBucketName} for Last Write Time over {retentionDays} days old ({purgeOlderDate.ToShortDateString()})");
 
             DirListingDTO dirListingDTO = CloudUtils.Instance.listFiles(googleBucketName);
            
@@ -40,7 +40,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     if (file.lastWriteDateTime < purgeOlderDate)
                     {
                         
-                        HTTPUtils.Instance.writeToLog(this.authtoken, "DELETING", file.FileName);
+                        HTTPUtils.Instance.writeToLogAsync(this.authtoken, "DELETING", file.FileName);
                         CloudUtils.Instance.deleteFile(googleBucketName, file.FileName);
                         filesDeleted = true;
                     }
@@ -51,7 +51,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(this.authtoken, "ERROR", googleBucketName + " ArchiveWorker: " + ex.ToString());
+                HTTPUtils.Instance.writeToLogAsync(this.authtoken, "ERROR", googleBucketName + " ArchiveWorker: " + ex.ToString());
 
             }
             //Thread.Sleep(6 * 60 * 60 * 1000 * RunTimeSettings.PollBaseTime);

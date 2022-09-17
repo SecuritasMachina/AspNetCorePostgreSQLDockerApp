@@ -45,7 +45,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         public async Task<object> StartAsync()
         {
-            HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "INFO", $"Starting BackupWorker worker for {_backupName}");
+            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Starting BackupWorker worker for {_backupName}");
             // Console.WriteLine("Starting BackupWorker for " + backupName);
 
             // Create a BlobServiceClient object which will be used to create a container client
@@ -62,7 +62,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 if (!blobClient.Exists())
                 {
                     string msg = $"{_backupName} disappeared before it could be read, is there another agent running using azureBlobContainerName:{_BlobContainerName}";
-                    HTTPUtils.Instance.writeToLog(this._customerGuid, "INFO", msg);
+                    HTTPUtils.Instance.writeToLogAsync(this._customerGuid, "INFO", msg);
 
                     return msg;
                 }
@@ -113,7 +113,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage.guid = _customerGuid;
 
                 //await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
-                HTTPUtils.Instance.writeToLog(this._customerGuid, "BACKUP-END", "Completed encryption, deleted : " + basebackupName);
+                HTTPUtils.Instance.writeToLogAsync(this._customerGuid, "BACKUP-END", "Completed encryption, deleted : " + basebackupName);
                 HTTPUtils.Instance.writeBackupHistory(this._customerGuid, basebackupName, _backupName, (long)outFileProperties.Size, startTimeStamp);
                 string messageType = HttpUtility.UrlEncode(basebackupName + "-backupComplete");
                 ServiceBusUtils.postMsg2ControllerAsync("agent/putCache", this._customerGuid, messageType, JsonConvert.SerializeObject(genericMessage));
@@ -123,7 +123,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             catch (Exception ex)
             {
-                HTTPUtils.Instance.writeToLog(this._customerGuid, "ERROR", _backupName + " " + ex.ToString());
+                HTTPUtils.Instance.writeToLogAsync(this._customerGuid, "ERROR", _backupName + " " + ex.ToString());
                 Console.WriteLine();
 
             }
