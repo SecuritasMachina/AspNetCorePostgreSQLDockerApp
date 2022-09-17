@@ -26,8 +26,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
         {
             try
             {
-
-
                 var github = new GitHubClient(new ProductHeaderValue($"SecuritasMachina_Agent_{VersionUtil.getAppName()}")); // TODO: other setup
                 var tokenAuth = new Credentials(GITHUB_PAT_Token); // NOTE: not real token
                 github.Credentials = tokenAuth;
@@ -52,8 +50,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage.msg = JsonConvert.SerializeObject(repoDTOs);
                 genericMessage.guid = RunTimeSettings.customerAgentAuthKey;
                 HTTPUtils.Instance.putCache(RunTimeSettings.customerAgentAuthKey, "REPOLIST", JsonConvert.SerializeObject(genericMessage));
-
-
                 HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"{repoDTOs.Count} Repositories Found");
 
                 string genericMsg = HTTPUtils.Instance.getRepoList(RunTimeSettings.customerAgentAuthKey);
@@ -64,7 +60,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     foreach (RepoDTO repo in repoDTOs)
                     {
                         GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker(this.GITHUB_PAT_Token, this.GITHUB_OrgName, this.customerGuid, this.googleBucketName, repo);
-                        ThreadUtils.addToGitHubWorkerQueue(gitHubArchiveWorker);
+                        ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
+                        Thread.Sleep(50);
                     }
                 }
             }

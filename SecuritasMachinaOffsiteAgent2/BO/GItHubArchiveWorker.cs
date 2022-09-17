@@ -43,10 +43,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.backupFrequency);
                     DateTime now = DateTime.Now;
                     DateTime dt = crontabSchedule.GetNextOccurrence(now);
+                    //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"{repo.FullName} Will run: {dt.ToString()}  ");
                     TimeSpan span = dt.Subtract(now);
                     TimeSpan span2 = now.Subtract(repo.lastBackupDate);
 
-                    if (span2.TotalMinutes < 5) 
+                    if (span2.TotalMinutes < 15)
                     {
                         return;
                     }
@@ -55,21 +56,17 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         return;
 
 
-                   // var github = new GitHubClient(new ProductHeaderValue($"SecuritasMachina_Agent_{VersionUtil.getAppName()}")); // TODO: other setup
-                    ///var tokenAuth = new Credentials(GITHUB_PAT_Token); // NOTE: not real token
-                    //github.Credentials = tokenAuth;
-
                     //Clone, then zip and store in google
                     string path = $"/mnt/offsite/Repos/{repo.FullName}";
                     DirectoryInfo di = new DirectoryInfo(path);
                     int retVal = 0;
                     if (!Directory.Exists(path))
                     {
-                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Cloning {repo.Url}");
+                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Mirroring {repo.Url}");
                         di = Directory.CreateDirectory(path);
                         String command = @"git clone --mirror " + repo.Url + " " + path;
                         retVal = Utils.ShellExec(path, command);
-                        if(retVal != 0)
+                        if (retVal != 0)
                             HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Error {retVal} while Cloning {repo.Url}");
                     }
                     else
@@ -86,43 +83,45 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     }
                     else
                     {
-                        int generationCount = 1;
-                        StorageClient googleClient = StorageClient.Create();
-
-                        string basebackupName = repo.FullName.Replace("/", "_");
-                        string outFileName = basebackupName + ".zip";
-                        while (true)
+                        if (span2.TotalHours > 4)
                         {
-                            if (generationCount > 99999)
+                            int generationCount = 1;
+                            StorageClient googleClient = StorageClient.Create();
+
+                            string basebackupName = repo.FullName.Replace("/", "_");
+                            string outFileName = basebackupName + ".zip";
+                            while (true)
                             {
-                                break;
+                                if (generationCount > 99999)
+                                {
+                                    break;
+                                }
+
+
+                                if (googleClient.ListObjects(googleBucketName, outFileName).Count() > 0)
+                                {
+
+                                    outFileName = basebackupName + "-" + generationCount + ".zip";
+                                    generationCount++;
+                                }
+                                else { break; }
                             }
 
 
-                            if (googleClient.ListObjects(googleBucketName, outFileName).Count() > 0)
-                            {
+                            string zipName = $"/mnt/offsite/Repos/{outFileName}";
+                            try { File.Delete(zipName); } catch (Exception ignore) { }
+                            ZipFile.CreateFromDirectory(path, zipName);
+                            Utils.writeFileToGoogle(RunTimeSettings.customerAgentAuthKey, "application/zip", googleBucketName, basebackupName + ".zip", zipName, RunTimeSettings.envPassPhrase);
+                            HTTPUtils.Instance.touchRepoLastBackup(RunTimeSettings.customerAgentAuthKey, repo);
+                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "BACKUP-END", "Completed encryption, synced and archived : " + basebackupName);
 
-                                outFileName = basebackupName + "-" + generationCount + ".zip";
-                                generationCount++;
-                            }
-                            else { break; }
                         }
-                        string zipName = $"/mnt/offsite/Repos/{outFileName}";
-                        try { File.Delete(zipName); } catch (Exception ignore) { }
-                        ZipFile.CreateFromDirectory(path, zipName);
-
-                        Utils.writeFileToGoogle(RunTimeSettings.customerAgentAuthKey, "application/zip", googleBucketName, basebackupName + ".zip", zipName, RunTimeSettings.envPassPhrase);
-                        HTTPUtils.Instance.touchRepoLastBackup(RunTimeSettings.customerAgentAuthKey, repo);
-                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "BACKUP-END", "Completed encryption, synced and archived : " + basebackupName);
-
-
-
+                        else
+                        {
+                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "BACKUP-END", "Completed sync: " + repo.FullName);
+                        }
                     }
-
-
-
                 }
-
             }
             catch (Exception ex)
             {

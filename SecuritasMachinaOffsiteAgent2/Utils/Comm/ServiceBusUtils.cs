@@ -41,7 +41,7 @@ namespace Common.Utils.Comm
                 serviceBusMessages.Add(new ServiceBusMessage(JsonConvert.SerializeObject(genericMessage)));
                 TimeSpan span2 = DateTime.Now.Subtract(startTime);
 
-                if (serviceBusMessages.Count > 5 || span2.TotalSeconds > 10)
+                if (serviceBusMessages.Count > 5 || span2.TotalSeconds > 5)
                 {
                     await sender.SendMessagesAsync(serviceBusMessages);
                     serviceBusMessages.Clear();
@@ -51,7 +51,7 @@ namespace Common.Utils.Comm
                         aTimer.Dispose();
                     }
                     aTimer = new Timer(new TimerCallback(TimerProc));
-                    aTimer.Change(10 * 1000, Timeout.Infinite);
+                    aTimer.Change(5 * 1000, Timeout.Infinite);
 
                 }
 
@@ -65,6 +65,10 @@ namespace Common.Utils.Comm
         }
         private static async void TimerProc(object state)
         {
+            if (client == null)
+                client = new ServiceBusClient(RunTimeSettings.sbrootConnectionString);
+            if (sender == null)
+                sender = client.CreateSender("coordinator");
             // The state object is the Timer object.
             await sender.SendMessagesAsync(serviceBusMessages);
             serviceBusMessages.Clear();

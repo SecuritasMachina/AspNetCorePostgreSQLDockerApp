@@ -6,25 +6,44 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
-    internal class ThreadUtils
+    internal class ThreadUtilsV2
     {
 
 
-        static ConcurrentDictionary<string, BackupWorker> dtBackupWorker = new ConcurrentDictionary<string, BackupWorker>();
-        static ConcurrentDictionary<string, GitHubArchiveWorker> dtGitHubWorker = new ConcurrentDictionary<string, GitHubArchiveWorker>();
+        private static ConcurrentDictionary<string, BackupWorker> dtBackupWorker ;
+        private static ConcurrentDictionary<string, GitHubArchiveWorker> dtGitHubWorker;
+        private static ThreadUtilsV2? instance;
+        
+        public static ThreadUtilsV2 Instance
+        {
+            get
+            {
+                if (instance == null)
+                {
+                    instance = new ThreadUtilsV2();
+                }
+                return instance;
+            }
+        }
+        private ThreadUtilsV2()
+        {
 
-        internal static void deleteFromQueue(string key)
+            dtBackupWorker = new ConcurrentDictionary<string, BackupWorker>();
+            dtGitHubWorker = new ConcurrentDictionary<string, GitHubArchiveWorker>();
+        }
+        internal void deleteFromQueue(string key)
         {
             BackupWorker tmp = null;
 
             bool v = dtBackupWorker.TryRemove(key, out tmp);
         }
-        internal static bool isInQueue(string pBackupWorkerName)
+        internal bool isInQueue(string pBackupWorkerName)
         {
             bool ret = true;
             if (!dtBackupWorker.ContainsKey(pBackupWorkerName))
@@ -35,7 +54,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             return ret;
         }
 
-        internal static void addToBackupWorkerQueue(BackupWorker backupWorker)
+        internal void addToBackupWorkerQueue(BackupWorker backupWorker)
         {
             int tCount = 0;
             DateTime start = DateTime.Now;
@@ -79,8 +98,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
 
         }
-        //public static readonly object dtGitHubWorker = new object();
-        internal static void addToGitHubWorkerQueue(GitHubArchiveWorker backupWorker)
+        
+        internal void addToGitHubWorkerQueue(GitHubArchiveWorker backupWorker)
         {
 
             DateTime start = DateTime.Now;

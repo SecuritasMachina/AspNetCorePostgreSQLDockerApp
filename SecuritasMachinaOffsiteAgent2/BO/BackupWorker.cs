@@ -119,7 +119,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 ServiceBusUtils.postMsg2ControllerAsync("agent/putCache", this._customerGuid, messageType, JsonConvert.SerializeObject(genericMessage));
                 // HTTPUtils.Instance.putCache(this.customerGuid, payload, JsonConvert.SerializeObject(genericMessage));
                 //Console.WriteLine("Completed encryption, deleted : " + basebackupName + " payload:" + messageType);
-                ThreadUtils.deleteFromQueue(basebackupName);
+                ThreadUtilsV2.Instance.deleteFromQueue(basebackupName);
             }
             catch (Exception ex)
             {
