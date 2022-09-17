@@ -1,17 +1,7 @@
 ﻿using Azure.Messaging.ServiceBus;
 using Common.DTO.V2;
 using Common.Statics;
-using ConcurrentList;
 using Newtonsoft.Json;
-using SecuritasMachinaOffsiteAgent.BO;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Timers;
 using Timer = System.Threading.Timer;
 
 namespace Common.Utils.Comm
@@ -128,14 +118,10 @@ namespace Common.Utils.Comm
 
             //startTime = DateTime.Now;
             // The state object is the Timer object.
-            var t = (Timer)state;
+            //var t = (Timer)state;
 
             lock (aTimer)
                 aTimer.Change(5 * 1000, Timeout.Infinite);
-
-
-
-
         }
     }
 

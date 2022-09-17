@@ -4,6 +4,7 @@ using Common.Utils.Comm;
 using NCrontab;
 using Newtonsoft.Json;
 using Octokit;
+using System;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
@@ -81,6 +82,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         if (!String.IsNullOrEmpty(repo.backupFrequency))
                         {
                             CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.backupFrequency);
+
                             DateTime dt = crontabSchedule.GetNextOccurrence(DateTime.Now);
                             if (dt < nextRunSoonest)
                                 nextRunSoonest = dt;
@@ -90,32 +92,44 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     if (nextRunSoonest < DateTime.MaxValue)
                     {
                         TimeSpan nextRunJobspan = nextRunSoonest.Subtract(DateTime.Now);
+                        TimeZoneInfo easternTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+                        var utc = nextRunSoonest.ToUniversalTime();
+                        DateTime convertedDate = TimeZoneInfo.ConvertTimeFromUtc(utc, easternTimeZone);
+
                         int totalMinLeft = ((int)nextRunJobspan.TotalMinutes);
-                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Next Job in {totalMinLeft+1} minute(s) @ {nextRunSoonest.ToString()}");
-                        if (totalMinLeft >= 0 && totalMinLeft < 2)
+                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in {totalMinLeft+1} minute(s) @ {String.Format("{0:g}", convertedDate)}");
+                        if (totalMinLeft >= 0 && nextRunJobspan.TotalMinutes < .5)
                             runJobs = true;
                     }
                     
                     if (runJobs)
                     {
                         bool queuedSuccess = false;
+                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Checking for jobs to run");
                         foreach (RepoDTO repo in repoDTOs)
                         {
                             if (!String.IsNullOrEmpty(repo.backupFrequency))
                             {
                                 CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.backupFrequency);
-                                DateTime dt = crontabSchedule.GetNextOccurrence(DateTime.Now);
-                                TimeSpan nextRunJobspan = nextRunSoonest.Subtract(DateTime.Now);
+                                TimeZoneInfo easternTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+
+                                DateTime now = DateTime.Now;
+                                //DateTime now = TimeZoneInfo.ConvertTimeFromUtc(now1, easternTimeZone);
+                                DateTime dt = crontabSchedule.GetNextOccurrence(now);
+                                TimeSpan nextRunJobspan = nextRunSoonest.Subtract(now);
                                 int totalMinLeft = ((int)nextRunJobspan.TotalMinutes);
-                                if (totalMinLeft >= 0 && totalMinLeft < 2)
+
+                                if (totalMinLeft >= 0 && nextRunJobspan.TotalMinutes < .5)
                                 {
                                     GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker(this.GITHUB_PAT_Token, this.GITHUB_OrgName, this.customerGuid, this.googleBucketName, repo);
-                                    if (queuedSuccess)
-                                        ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
-                                    else
-                                        queuedSuccess = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
-                                    Thread.Sleep(50);
-
+                                    if (!ThreadUtilsV2.Instance.isGitWorkerInQueue(gitHubArchiveWorker.ToString()))
+                                    {
+                                        if (queuedSuccess)
+                                            ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
+                                        else
+                                            queuedSuccess = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
+                                        Thread.Sleep(50);
+                                    }
                                 }
                             }
                         }

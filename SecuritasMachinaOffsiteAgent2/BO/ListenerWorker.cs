@@ -52,7 +52,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             RunTimeSettings.DATAPATH = Environment.GetEnvironmentVariable("DATAPATH");
             if (String.IsNullOrEmpty(RunTimeSettings.DATAPATH))
-                RunTimeSettings.DATAPATH = "/mnt/offsite";
+                RunTimeSettings.DATAPATH = "/mnt/localhome";
             RunTimeSettings.customerAgentAuthKey = Environment.GetEnvironmentVariable("customerAgentAuthKey");
             RunTimeSettings.GITHUB_PAT_Token = Environment.GetEnvironmentVariable("GITHUB_PAT_Token");
             RunTimeSettings.GITHUB_OrgName = Environment.GetEnvironmentVariable("GITHUB_OrgName");
@@ -273,9 +273,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
         private void scanGitHubWorkerTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
             System.Timers.Timer tmpTimer = (System.Timers.Timer)source;
-            tmpTimer.Stop();
+            tmpTimer.Enabled = false;
             scanGitHubWorker.StartAsync();
-            tmpTimer.Start();
+            tmpTimer.Enabled = true;
         }
 
         private void offsiteWorkerOnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)

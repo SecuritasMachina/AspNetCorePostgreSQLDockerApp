@@ -255,7 +255,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 info = new ProcessStartInfo
                 {
                     UseShellExecute = false,
-                    LoadUserProfile = true,
                     ErrorDialog = false,
                     CreateNoWindow = true,
                     WindowStyle = ProcessWindowStyle.Hidden,
@@ -264,9 +263,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     RedirectStandardError = true,
                     StandardErrorEncoding = Encoding.UTF8,
                     WorkingDirectory = workingDir,
-                    FileName = "bash",
-                    Arguments = "/k " + command
+                    FileName = command.Substring(0,command.IndexOf(" ")),
+                    Arguments = " " + command.Substring(command.IndexOf(" "))
                 };
+                //,                
             }
             else
             {
