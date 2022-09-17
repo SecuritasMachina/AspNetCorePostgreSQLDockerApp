@@ -107,7 +107,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         if (nextRunJobspan.TotalMinutes < 1)
                             HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in less than a minute @ {String.Format("{0:g}", convertedDate)}");
                         else
-                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in {totalMinLeft + 1} minute(s) @ {String.Format("{0:g}", convertedDate)}");
+                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in {totalMinLeft + 1} minutes @ {String.Format("{0:g}", convertedDate)}");
                         if (totalMinLeft >= 0 && nextRunJobspan.TotalMinutes < .5)
                             runJobs = true;
                     }
@@ -123,8 +123,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                 CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.backupFrequency);
 
                                 DateTime now = Utils.getDBDateNow();
-                                DateTime dt = crontabSchedule.GetNextOccurrence(DateTime.Now);
-                                TimeSpan nextRunJobspan = nextRunSoonest.Subtract(DateTime.Now);
+                                DateTime nextDate = crontabSchedule.GetNextOccurrence(DateTime.Now);
+                                TimeSpan nextRunJobspan = nextDate.Subtract(DateTime.Now);
                                 int totalMinLeft = ((int)nextRunJobspan.TotalMinutes);
                                 TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
                                 TimeSpan lastSyncSpan = now.Subtract(repo.lastSyncDate);
@@ -138,7 +138,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                 if (totalMinLeft >= 0 && nextRunJobspan.TotalMinutes < .5)
                                 {
 
-                                    //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"loading {repo.FullName} lastSyncSpan.TotalMinutes:{lastSyncSpan.TotalMinutes} lastBackupSpan.TotalMinutes:{lastBackupSpan.TotalMinutes}");
+                                    //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"loading {repo.FullName} nextRunJobspan.TotalMinutes:{nextRunJobspan.TotalMinutes}");
                                     
                                     if (!ThreadUtilsV2.Instance.isGitWorkerInQueue(repo.FullName))
                                     {
@@ -152,6 +152,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                             queuedSuccess = success;
                                         //Thread.Sleep(50);
                                     }
+                                }
+                                else
+                                {
+                                   // HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skipping {repo.FullName} nextRunJobspan.TotalMinutes:{nextRunJobspan.TotalMinutes}");
                                 }
                             }
                         }

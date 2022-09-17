@@ -157,18 +157,16 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             }
             string backWorkerName = backupWorker.ToString();
-            bool tmpBool = false;
-            //lock (dtGitHubWorker)
-            tmpBool = isGitWorkerInQueue(backWorkerName);
+            bool tmpBool = isGitWorkerInQueue(backWorkerName);
 
             if (!tmpBool)
             {
                 bool addSuccess = false;
                 addSuccess = addToGitWorkerQueue(backupWorker);
-                
+
                 if (addSuccess)
                 {
-                    
+
                     ThreadPool.QueueUserWorkItem(async x =>
                     {
                         QueuedSuccess = await backupWorker.StartAsync();
