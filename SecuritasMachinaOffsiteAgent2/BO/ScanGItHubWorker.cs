@@ -91,12 +91,14 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     {
                         TimeSpan nextRunJobspan = nextRunSoonest.Subtract(DateTime.Now);
                         int totalMinLeft = ((int)nextRunJobspan.TotalMinutes);
-                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Next Job in {totalMinLeft} minute(s) @ {nextRunSoonest.ToString()}");
+                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Next Job in {totalMinLeft+1} minute(s) @ {nextRunSoonest.ToString()}");
                         if (totalMinLeft >= 0 && totalMinLeft < 2)
                             runJobs = true;
                     }
-
+                    
                     if (runJobs)
+                    {
+                        bool queuedSuccess = false;
                         foreach (RepoDTO repo in repoDTOs)
                         {
                             if (!String.IsNullOrEmpty(repo.backupFrequency))
@@ -108,13 +110,18 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                 if (totalMinLeft >= 0 && totalMinLeft < 2)
                                 {
                                     GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker(this.GITHUB_PAT_Token, this.GITHUB_OrgName, this.customerGuid, this.googleBucketName, repo);
-                                    bool queuedSuccess = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
-                                    Thread.Sleep(50);
                                     if (queuedSuccess)
-                                        repoListRefreshTime = DateTime.MinValue;
+                                        ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
+                                    else
+                                        queuedSuccess = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
+                                    Thread.Sleep(50);
+
                                 }
                             }
                         }
+                        if (queuedSuccess)
+                            repoListRefreshTime = DateTime.MinValue;
+                    }
                 }
 
             }

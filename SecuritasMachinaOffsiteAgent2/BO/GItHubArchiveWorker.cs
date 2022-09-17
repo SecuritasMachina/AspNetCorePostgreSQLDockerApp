@@ -50,7 +50,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                     if (lastSyncSpan.TotalMinutes < 15 || lastBackupSpan.TotalMinutes < 15)
                     {
-                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Refusing to run {repo.FullName} job because last backup or sync was less than 15 minutes ago");
+                        //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Refusing to run {repo.FullName} job because last backup or sync was less than 15 minutes ago");
                         return false;
                     }
 
