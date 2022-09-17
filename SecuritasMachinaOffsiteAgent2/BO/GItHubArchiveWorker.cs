@@ -34,7 +34,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         {
             return repo.FullName;
         }
-        public async Task StartAsync()
+        public async Task<bool> StartAsync()
         {
             try
             {
@@ -44,17 +44,18 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     DateTime now = DateTime.Now;
                     DateTime dt = crontabSchedule.GetNextOccurrence(now);
                     //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"{repo.FullName} Will run: {dt.ToString()}  ");
-                    TimeSpan span = dt.Subtract(now);
+                    TimeSpan nextRunJobspan = dt.Subtract(now);
                     TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
                     TimeSpan lastSyncSpan = now.Subtract(repo.lastSyncDate);
 
                     if (lastSyncSpan.TotalMinutes < 15 || lastBackupSpan.TotalMinutes < 15)
                     {
-                        return;
+                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Refusing to run {repo.FullName} job because last backup or sync was less than 15 minutes ago");
+                        return false;
                     }
 
-                    if (((int)span.TotalMinutes) > 1)
-                        return;
+                    if (((int)nextRunJobspan.TotalMinutes) > 1)
+                        return false;
 
 
                     //Clone, then zip and store in google
@@ -109,7 +110,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                             }
 
 
-                            string zipName = $"/mnt/offsite/Repos/{outFileName}";
+                            string zipName = $"{RunTimeSettings.DATAPATH}/Repos/{outFileName}";
                             try { File.Delete(zipName); } catch (Exception ignore) { }
                             ZipFile.CreateFromDirectory(path, zipName);
                             Utils.writeFileToGoogle(RunTimeSettings.customerAgentAuthKey, "application/zip", googleBucketName, basebackupName + ".zip", zipName, RunTimeSettings.envPassPhrase);
@@ -124,11 +125,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         }
                     }
                 }
+                return true;
             }
             catch (Exception ex)
             {
                 HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"GitHubArchiveWorker {ex.ToString()}");
             }
+            return false;
 
         }
 

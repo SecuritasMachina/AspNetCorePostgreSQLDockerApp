@@ -26,6 +26,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
                 if (instance == null)
                 {
+                    //Console.WriteLine("instance = new ThreadUtilsV2();");
                     instance = new ThreadUtilsV2();
                 }
                 return instance;
@@ -65,7 +66,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             while (tCount >= RunTimeSettings.MaxThreads && timeDiff.Hours < 1)
             {
-                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Throttling BackupWorkerQueue Threads {RunTimeSettings.MaxThreads}");
+                
                 tCount = 0;
                 string tmp = "";
                 foreach (var worker in dtBackupWorker.Values)
@@ -73,8 +74,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     tCount++;
                     tmp += $" | Active Thread {tCount}: {worker.ToString()}";
                 }
+                
                 if (!String.IsNullOrEmpty(tmp))
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", tmp);
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Throttling BackupWorkerQueue Threads {RunTimeSettings.MaxThreads} Threads:{tmp}");
                 Thread.Sleep(5 * 1000);
                 tmp = "";
                 timeDiff = DateTime.Now - start;
@@ -91,7 +93,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     await backupWorker.StartAsync();
                     BackupWorker tmp = null;
                     bool v = dtBackupWorker.TryRemove(backWorkerName, out tmp);
-                    Thread.Sleep(100);
+                    Thread.Sleep(25);
                     // countdownEvent.Signal();
                 });
             }
@@ -99,10 +101,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         }
         
-        internal void addToGitHubWorkerQueue(GitHubArchiveWorker backupWorker)
+        internal bool addToGitHubWorkerQueue(GitHubArchiveWorker backupWorker)
         {
 
             DateTime start = DateTime.Now;
+            bool QueuedSuccess = false;
             TimeSpan timeDiff = DateTime.Now - start;
             int tCount = 0;
             string tmp = "";
@@ -116,7 +119,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
             while (tCount >= RunTimeSettings.MaxThreads && timeDiff.TotalHours < 1)
             {
-                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Throttling GitHubWorkerQueue {tCount} of Max Threads {RunTimeSettings.MaxThreads} Active Threads: {tmp}");
+                start = DateTime.Now;
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Throttling {backupWorker.ToString()} {tCount} of Max Threads {RunTimeSettings.MaxThreads} Active Threads: {tmp}");
                 Thread.Sleep(5 * 1000);
                 tCount = 0;
                 tmp = "";
@@ -131,17 +135,15 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 if (tCount > 0)
                     HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Throttling GitHubWorkerQueue {tCount} of Max Threads {RunTimeSettings.MaxThreads} Active Threads: {tmp}");
 
-
-
-
                 timeDiff = DateTime.Now - start;
 
             }
+            start = DateTime.Now;
             string backWorkerName = backupWorker.ToString();
             bool tmpBool = false;
             lock (dtGitHubWorker)
                 tmpBool = dtGitHubWorker.ContainsKey(backWorkerName);
-
+            
             if (!tmpBool)
             {
                 bool addSuccess = false;
@@ -149,13 +151,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     addSuccess = dtGitHubWorker.TryAdd(backWorkerName, backupWorker);
                 if (addSuccess)
                 {
-                    //HTTPUtils.Instance.writeToLog(RunTimeSettings.customerAgentAuthKey, "INFO", $"Added Thread : {backWorkerName}");
-                    //ThreadPool.SetMaxThreads(RunTimeSettings.MaxThreads, RunTimeSettings.MaxThreads);
-
-
+                    //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Added Thread : {backWorkerName}");
                     ThreadPool.QueueUserWorkItem(async x =>
                     {
-                        await backupWorker.StartAsync();
+                         QueuedSuccess=await backupWorker.StartAsync();
                         GitHubArchiveWorker tmp = null;
                         bool v = false;
                         lock (dtGitHubWorker)
@@ -164,10 +163,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         {
                             HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"Remove failed for Thread : {backWorkerName}");
                         }
+                        
 
 
-                        Thread.Sleep(100);
+                        Thread.Sleep(25);
                     });
+                    return QueuedSuccess;
                 }
                 else
                 {
@@ -178,7 +179,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
                 HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Already have {backWorkerName}");
             }
-
+            return QueuedSuccess;
 
 
         }

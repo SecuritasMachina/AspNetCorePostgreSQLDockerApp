@@ -51,7 +51,7 @@ namespace Common.Statics
             set { WebListenerURL = value; }
         }
 
-        public static string googleStorageBucketName { get; internal set; }
-       
+        public static string? googleStorageBucketName;
+        public static string? DATAPATH;
     }
 }

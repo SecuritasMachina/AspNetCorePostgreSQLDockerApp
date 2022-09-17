@@ -26,7 +26,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         // the processor that reads and processes messages from the queue
         ServiceBusProcessor processor;
         // private int tLoopCount;
-
+        private ScanGitHubWorker scanGitHubWorker;
 
 
         internal async Task startAsync()
@@ -50,7 +50,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 RunTimeSettings.MaxThreads = 3;
 
             }
-
+            RunTimeSettings.DATAPATH = Environment.GetEnvironmentVariable("DATAPATH");
+            if (String.IsNullOrEmpty(RunTimeSettings.DATAPATH))
+                RunTimeSettings.DATAPATH = "/mnt/offsite";
             RunTimeSettings.customerAgentAuthKey = Environment.GetEnvironmentVariable("customerAgentAuthKey");
             RunTimeSettings.GITHUB_PAT_Token = Environment.GetEnvironmentVariable("GITHUB_PAT_Token");
             RunTimeSettings.GITHUB_OrgName = Environment.GetEnvironmentVariable("GITHUB_OrgName");
@@ -62,7 +64,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             RunTimeSettings.azureSourceBlobContainerName = Environment.GetEnvironmentVariable("azureSourceBlobContainerName");
             RunTimeSettings.azureBlobRestoreContainerName = Environment.GetEnvironmentVariable("azureBlobRestoreContainerName");
-            if (RunTimeSettings.azureBlobRestoreContainerName == null)
+            if (String.IsNullOrEmpty(RunTimeSettings.azureBlobRestoreContainerName))
                 RunTimeSettings.azureBlobRestoreContainerName = "restored";
 
             Console.WriteLine();
@@ -72,6 +74,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             Console.WriteLine("GoogleStorageBucketName:" + RunTimeSettings.GoogleStorageBucketName);
             Console.WriteLine("Customer authkey:" + RunTimeSettings.customerAgentAuthKey);
             Console.WriteLine("RetentionDays:" + RunTimeSettings.RetentionDays);
+            Console.WriteLine("DATAPATH:" + RunTimeSettings.DATAPATH);
             Console.WriteLine("MaxThreads:" + RunTimeSettings.MaxThreads);
 
 
@@ -98,7 +101,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 Environment.Exit(1);
             }
 
-            
+
             try
             {
                 Console.Write("Testing writing to Google Storage Bucket Name: " + RunTimeSettings.GoogleStorageBucketName);
@@ -182,21 +185,22 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             try
             {
-                // Create the client object that will be used to create sender and receiver objects
-                client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
-                // create a processor that we can use to process the messages
-                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Starting Listener on {RunTimeSettings.customerAgentAuthKey}");
-                processor = client.CreateProcessor(RunTimeSettings.serviceBusTopic, RunTimeSettings.clientSubscriptionName, new ServiceBusProcessorOptions());
+                try
+                {
+                    // Create the client object that will be used to create sender and receiver objects
+                    client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
+                    // create a processor that we can use to process the messages
+                    processor = client.CreateProcessor(RunTimeSettings.serviceBusTopic, RunTimeSettings.clientSubscriptionName, new ServiceBusProcessorOptions());
+                    // add handler to process messages
+                    processor.ProcessMessageAsync += MessageHandler;
+                    // add handler to process any errors
+                    processor.ProcessErrorAsync += ErrorHandler;
+                    // start processing 
+                    await processor.StartProcessingAsync();
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Starting Listener on {RunTimeSettings.customerAgentAuthKey}");
+                }
+                catch (Exception ex) { Console.WriteLine($"Error Connecting to Service Bus {ex.ToString()}"); return; }
 
-                // Console.WriteLine("Listening");
-                // add handler to process messages
-                processor.ProcessMessageAsync += MessageHandler;
-
-                // add handler to process any errors
-                processor.ProcessErrorAsync += ErrorHandler;
-
-                // start processing 
-                await processor.StartProcessingAsync();
                 HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Listening on {RunTimeSettings.customerAgentAuthKey}");
                 //Start up background jobs
                 int maxRandomWait = 2000;
@@ -204,47 +208,44 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 if (!String.IsNullOrEmpty(RunTimeSettings.GITHUB_PAT_Token))
                 {
-                    Thread.Sleep(new Random().Next(maxRandomWait));
+                    scanGitHubWorker = new ScanGitHubWorker(RunTimeSettings.GITHUB_PAT_Token, RunTimeSettings.GITHUB_OrgName, RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName);
                     Timer scanGitHubWorkerTimer = new Timer();
-                    scanGitHubWorkerTimer.Interval = (1000 * 60) + (new Random().Next(maxRandomWait));
+                    scanGitHubWorkerTimer.Interval = (1000 * 20) + (new Random().Next(maxRandomWait));
                     scanGitHubWorkerTimer.Elapsed += scanGitHubWorkerTimedEvent;
                     scanGitHubWorkerTimer.AutoReset = true; scanGitHubWorkerTimer.Enabled = true;
                     HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started GitHub scan worker");
-
+                    Thread.Sleep(new Random().Next(maxRandomWait));
                 }
-                else
-                {
 
-                    Timer archiveWorkerTimer = new Timer();
-                    if (RunTimeSettings.RetentionDays == 0) RunTimeSettings.RetentionDays = 1;
-                    if (RunTimeSettings.RetentionDays != 0)
-                        archiveWorkerTimer.Interval = (1000 * 60 * 60 * 1) + (new Random().Next(maxRandomWait));
-                    else
-                        archiveWorkerTimer.Interval = (1000 * 10);
+                Timer archiveWorkerTimer = new Timer();
+                if (RunTimeSettings.RetentionDays == 0) RunTimeSettings.RetentionDays = 1;
+                archiveWorkerTimer.Interval = (1000 * 60 * 60 * 1) + (new Random().Next(maxRandomWait));
+                archiveWorkerTimer.Elapsed += archiveWorkerOnTimedEvent;
+                archiveWorkerTimer.AutoReset = true; archiveWorkerTimer.Enabled = true;
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Delete files worker for {RunTimeSettings.GoogleStorageBucketName}");
+                Thread.Sleep(new Random().Next(maxRandomWait));
 
-                    archiveWorkerTimer.Elapsed += archiveWorkerOnTimedEvent;
-                    archiveWorkerTimer.AutoReset = true; archiveWorkerTimer.Enabled = true;
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Delete files worker for {RunTimeSettings.GoogleStorageBucketName}");
-                    Thread.Sleep(new Random().Next(maxRandomWait));
-                    Timer statusWorkerTimer = new Timer();
-                    statusWorkerTimer.Interval = (1000 * 60 * 1) + (new Random().Next(maxRandomWait));
-                    statusWorkerTimer.Elapsed += statusWorkerOnTimedEvent;
-                    statusWorkerTimer.AutoReset = true; statusWorkerTimer.Enabled = true;
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Status worker");
-                    Thread.Sleep(new Random().Next(maxRandomWait));
-                    Timer offSiteWorkerTimer = new Timer();
-                    offSiteWorkerTimer.Interval = (1000 * 60 * 10) + (new Random().Next(maxRandomWait));
-                    offSiteWorkerTimer.Elapsed += offsiteWorkerOnTimedEvent;
-                    offSiteWorkerTimer.AutoReset = true; offSiteWorkerTimer.Enabled = true;
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started OffSite Status worker for {RunTimeSettings.GoogleStorageBucketName}");
-                    Thread.Sleep(new Random().Next(maxRandomWait));
-                    Timer scanStageWorkerTimer = new Timer();
-                    scanStageWorkerTimer.Interval = (1000 * 60 * 1) + (new Random().Next(maxRandomWait));
-                    scanStageWorkerTimer.Elapsed += scanStageWorkerOnTimedEvent;
-                    scanStageWorkerTimer.AutoReset = true; scanStageWorkerTimer.Enabled = true;
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Scan for Files worker for container {RunTimeSettings.azureSourceBlobContainerName}");
+                Timer statusWorkerTimer = new Timer();
+                statusWorkerTimer.Interval = (1000 * 60 * 1) + (new Random().Next(maxRandomWait));
+                statusWorkerTimer.Elapsed += statusWorkerOnTimedEvent;
+                statusWorkerTimer.AutoReset = true; statusWorkerTimer.Enabled = true;
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Status worker");
+                Thread.Sleep(new Random().Next(maxRandomWait));
 
-                }
+                Timer offSiteWorkerTimer = new Timer();
+                offSiteWorkerTimer.Interval = (1000 * 60 * 10) + (new Random().Next(maxRandomWait));
+                offSiteWorkerTimer.Elapsed += offsiteWorkerOnTimedEvent;
+                offSiteWorkerTimer.AutoReset = true; offSiteWorkerTimer.Enabled = true;
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started OffSite Status worker for {RunTimeSettings.GoogleStorageBucketName}");
+                Thread.Sleep(new Random().Next(maxRandomWait));
+
+                Timer scanStageWorkerTimer = new Timer();
+                scanStageWorkerTimer.Interval = (1000 * 60 * 1) + (new Random().Next(maxRandomWait));
+                scanStageWorkerTimer.Elapsed += scanStageWorkerOnTimedEvent;
+                scanStageWorkerTimer.AutoReset = true; scanStageWorkerTimer.Enabled = true;
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Scan for Files worker for container {RunTimeSettings.azureSourceBlobContainerName}");
+
+
 
                 Console.WriteLine();
                 Console.WriteLine("All Workers Ready");
@@ -271,10 +272,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
         }
         private void scanGitHubWorkerTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
-            ScanGitHubWorker scanGitHubWorker = new ScanGitHubWorker(RunTimeSettings.GITHUB_PAT_Token, RunTimeSettings.GITHUB_OrgName, RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName);
+            System.Timers.Timer tmpTimer = (System.Timers.Timer)source;
+            tmpTimer.Stop();
             scanGitHubWorker.StartAsync();
+            tmpTimer.Start();
         }
-        
+
         private void offsiteWorkerOnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
 
@@ -297,7 +300,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         static async Task MessageHandler(ProcessMessageEventArgs args)
         {
             string body = args.Message.Body.ToString();
-            
+
             try
             {
                 GenericMessage genericMessage = JsonConvert.DeserializeObject<GenericMessage>(body);
@@ -312,10 +315,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 //Console.WriteLine($"Received: {body}");
                 if (msgType == "restoreFile")
                 {
-                    
+
                     string inFileName = msgObj.backupName;
                     RestoreWorker restoreWorker = new RestoreWorker(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName, RunTimeSettings.azureBlobRestoreContainerName, RunTimeSettings.azureBlobEndpoint, RunTimeSettings.azureSourceBlobContainerName, inFileName, RunTimeSettings.envPassPhrase);
-                    
+
                     Task restoreWorkerTask = Task.Run(() => restoreWorker.StartAsync());
 
                 }

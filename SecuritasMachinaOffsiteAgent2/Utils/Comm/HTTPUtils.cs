@@ -92,7 +92,7 @@ namespace Common.Utils.Comm
         public async Task writeToLogAsync(string? pAuthKey, string? messageType, string? json)
         {
            
-            await ServiceBusUtils.postMsg2ControllerAsync("agent/logs", pAuthKey, messageType, json);
+            await ServiceBusUtils.Instance.postMsg2ControllerAsync("agent/logs", pAuthKey, messageType, json);
         }
         public void writeBackupHistory(string? guid, string? backupFile, string newFileName, long fileLength, long startTimeStamp)
         {
@@ -104,16 +104,16 @@ namespace Common.Utils.Comm
             backupHistoryDTO.fileLength = fileLength;
             backupHistoryDTO.newFileName = newFileName;
             backupHistoryDTO.startTimeStamp = startTimeStamp;
-            ServiceBusUtils.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAgentAuthKey, "writeBackupHistory", JsonConvert.SerializeObject(backupHistoryDTO));
+            ServiceBusUtils.Instance.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAgentAuthKey, "writeBackupHistory", JsonConvert.SerializeObject(backupHistoryDTO));
         }
         public void touchRepoLastBackup(string? guid, RepoDTO? repoDTO)
         {
-            ServiceBusUtils.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAgentAuthKey, "updateRepoBackupStatus", JsonConvert.SerializeObject(repoDTO));
+            ServiceBusUtils.Instance.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAgentAuthKey, "updateRepoBackupStatus", JsonConvert.SerializeObject(repoDTO));
         }
         public void putCache(string topiccustomerGuid, string messageType, string json)
         {
 
-            ServiceBusUtils.postMsg2ControllerAsync("agent/putCache", topiccustomerGuid, messageType, json);
+            ServiceBusUtils.Instance.postMsg2ControllerAsync("agent/putCache", topiccustomerGuid, messageType, json);
         }
 
         internal string getCache(string? customerAuthKey, string v)
@@ -148,7 +148,7 @@ namespace Common.Utils.Comm
 
         internal void touchRepoLastSync(string? customerAgentAuthKey, RepoDTO repo)
         {
-            ServiceBusUtils.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAgentAuthKey, "touchRepoLastSync", JsonConvert.SerializeObject(repo));
+            ServiceBusUtils.Instance.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAgentAuthKey, "touchRepoLastSync", JsonConvert.SerializeObject(repo));
         }
     }
 }
