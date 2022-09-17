@@ -145,6 +145,11 @@ namespace Common.Utils.Comm
             catch (Exception ignore) { }
             return ret;
         }
+
+        internal void touchRepoLastSync(string? customerAgentAuthKey, RepoDTO repo)
+        {
+            ServiceBusUtils.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAgentAuthKey, "touchRepoLastSync", JsonConvert.SerializeObject(repo));
+        }
     }
 }
 

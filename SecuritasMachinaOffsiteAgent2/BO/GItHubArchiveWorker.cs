@@ -45,9 +45,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     DateTime dt = crontabSchedule.GetNextOccurrence(now);
                     //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"{repo.FullName} Will run: {dt.ToString()}  ");
                     TimeSpan span = dt.Subtract(now);
-                    TimeSpan span2 = now.Subtract(repo.lastBackupDate);
+                    TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
+                    TimeSpan lastSyncSpan = now.Subtract(repo.lastSyncDate);
 
-                    if (span2.TotalMinutes < 15)
+                    if (lastSyncSpan.TotalMinutes < 15 || lastBackupSpan.TotalMinutes < 15)
                     {
                         return;
                     }
@@ -83,7 +84,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     }
                     else
                     {
-                        if (span2.TotalHours > 4)
+                        if (lastBackupSpan.TotalHours > 4)
                         {
                             int generationCount = 1;
                             StorageClient googleClient = StorageClient.Create();
@@ -118,7 +119,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         }
                         else
                         {
-                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "BACKUP-END", "Completed sync: " + repo.FullName);
+                            HTTPUtils.Instance.touchRepoLastSync(RunTimeSettings.customerAgentAuthKey, repo);
+                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "SYNC-END", "Completed sync: " + repo.FullName);
                         }
                     }
                 }

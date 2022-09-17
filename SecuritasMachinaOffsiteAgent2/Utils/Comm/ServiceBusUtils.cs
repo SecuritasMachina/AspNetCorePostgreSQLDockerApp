@@ -31,6 +31,13 @@ namespace Common.Utils.Comm
                     client = new ServiceBusClient(RunTimeSettings.sbrootConnectionString);
                 if (sender == null)
                     sender = client.CreateSender("coordinator");
+                if (aTimer == null)
+                {
+                    aTimer = new Timer(new TimerCallback(TimerProc));
+                    aTimer.Change(10 * 1000, Timeout.Infinite);
+                }
+                
+
                 GenericMessage genericMessage = new GenericMessage();
                 genericMessage.guid = pAuthKey;
                 genericMessage.nameSpace = nameSpace;
@@ -41,7 +48,7 @@ namespace Common.Utils.Comm
                 serviceBusMessages.Add(new ServiceBusMessage(JsonConvert.SerializeObject(genericMessage)));
                 TimeSpan span2 = DateTime.Now.Subtract(startTime);
 
-                if (serviceBusMessages.Count > 5 || span2.TotalSeconds > 5)
+                if (serviceBusMessages.Count > 10 || span2.TotalSeconds > 5)
                 {
                     await sender.SendMessagesAsync(serviceBusMessages);
                     serviceBusMessages.Clear();
@@ -50,8 +57,10 @@ namespace Common.Utils.Comm
                     {
                         aTimer.Dispose();
                     }
-                    aTimer = new Timer(new TimerCallback(TimerProc));
-                    aTimer.Change(5 * 1000, Timeout.Infinite);
+                    
+                        aTimer = new Timer(new TimerCallback(TimerProc));
+                        aTimer.Change(10 * 1000, Timeout.Infinite);
+                    
 
                 }
 
