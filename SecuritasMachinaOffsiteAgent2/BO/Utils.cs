@@ -36,6 +36,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
             double num = Math.Round(bytes / Math.Pow(1024, place), 1);
             return (Math.Sign(byteCount) * num).ToString() + suf[place];
         }
+        public static DateTime getDBDateNow()
+        {
+            TimeZoneInfo easternTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
+            return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, easternTimeZone);
+        }
         public static DirListingDTO doDirListing(string topiccustomerGuid, string pBucketName)
         {
             // DirectoryInfo directoryInfo = new DirectoryInfo(pBucketName);

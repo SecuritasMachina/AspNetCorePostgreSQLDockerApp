@@ -18,6 +18,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
         private static DateTime cacheRefreshTime;
         private static DateTime repoListRefreshTime;
         private static string repoListMsg;
+        private static List<RepoDTO> _RepoDTOs;
 
         public ScanGitHubWorker(string GITHUB_PAT_Token, string GITHUB_OrgName, string customerGuid, string googleBucketName)
         {
@@ -27,15 +28,16 @@ namespace SecuritasMachinaOffsiteAgent.BO
             this.googleBucketName = googleBucketName;
             cacheRefreshTime = DateTime.MinValue;
             repoListRefreshTime = DateTime.MinValue;
+            _RepoDTOs = new List<RepoDTO>();
         }
 
         public async Task StartAsync()
         {
-            List<RepoDTO> repoDTOs = new List<RepoDTO>();
+            //List<RepoDTO> repoDTOs = new List<RepoDTO>();
             GenericMessage genericMessage = new GenericMessage();
             try
             {
-                if (cacheRefreshTime.AddMinutes(2) < DateTime.Now)
+                if (cacheRefreshTime.AddMinutes(5) < DateTime.Now)
                 {
                     cacheRefreshTime = DateTime.Now;
                     var github = new GitHubClient(new ProductHeaderValue($"SecuritasMachina_Agent_{VersionUtil.getAppName()}")); // TODO: other setup
@@ -43,7 +45,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     github.Credentials = tokenAuth;
                     IReadOnlyList<Repository> contents = await github
                                                     .Repository.GetAllForUser(GITHUB_OrgName);
-
+                    List<RepoDTO> repoDTOs = new List<RepoDTO>();
                     foreach (Repository repo in contents)
                     {
                         RepoDTO repoDTO = new RepoDTO();
@@ -52,9 +54,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         repoDTO.Size = repo.Size;
                         repoDTO.UpdatedAt = repo.UpdatedAt.ToUnixTimeMilliseconds();
                         repoDTO.Url = repo.CloneUrl;
-
                         repoDTOs.Add(repoDTO);
-
                     }
 
                     GenericMessage.msgTypes msgType = GenericMessage.msgTypes.REPOLIST;
@@ -62,22 +62,29 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     genericMessage.msg = JsonConvert.SerializeObject(repoDTOs);
                     genericMessage.guid = RunTimeSettings.customerAgentAuthKey;
                     HTTPUtils.Instance.putCache(RunTimeSettings.customerAgentAuthKey, "REPOLIST", JsonConvert.SerializeObject(genericMessage));
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"{repoDTOs.Count} Repositories Found");
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Found {repoDTOs.Count} Repositories");
 
 
                 }
-                if (repoListRefreshTime.AddSeconds(25) < DateTime.Now)
+                if (repoListRefreshTime.AddMinutes(6) < DateTime.Now)
                 {
                     repoListRefreshTime = DateTime.Now;
                     repoListMsg = HTTPUtils.Instance.getRepoList(RunTimeSettings.customerAgentAuthKey);
+                    _RepoDTOs = JsonConvert.DeserializeObject<List<RepoDTO>>(repoListMsg);
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Received {_RepoDTOs.Count} Repositories");
                 }
-
-                if (!String.IsNullOrEmpty(repoListMsg))
+                int qSize = ThreadUtilsV2.Instance.getGitQueueSize();
+                if (qSize > 0)
+                {
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Waiting for {qSize} threads to finish");
+                    return;
+                }
+                if (_RepoDTOs.Count > 0)
                 {
                     //Loop through and run any crons
-                    repoDTOs = JsonConvert.DeserializeObject<List<RepoDTO>>(repoListMsg);
+
                     DateTime nextRunSoonest = DateTime.MaxValue;
-                    foreach (RepoDTO repo in repoDTOs)
+                    foreach (RepoDTO repo in _RepoDTOs)
                     {
                         if (!String.IsNullOrEmpty(repo.backupFrequency))
                         {
@@ -97,44 +104,59 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         DateTime convertedDate = TimeZoneInfo.ConvertTimeFromUtc(utc, easternTimeZone);
 
                         int totalMinLeft = ((int)nextRunJobspan.TotalMinutes);
-                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in {totalMinLeft+1} minute(s) @ {String.Format("{0:g}", convertedDate)}");
+                        if (nextRunJobspan.TotalMinutes < 1)
+                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in less than a minute @ {String.Format("{0:g}", convertedDate)}");
+                        else
+                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in {totalMinLeft + 1} minute(s) @ {String.Format("{0:g}", convertedDate)}");
                         if (totalMinLeft >= 0 && nextRunJobspan.TotalMinutes < .5)
                             runJobs = true;
                     }
-                    
+
                     if (runJobs)
                     {
                         bool queuedSuccess = false;
                         HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Checking for jobs to run");
-                        foreach (RepoDTO repo in repoDTOs)
+                        foreach (RepoDTO repo in _RepoDTOs)
                         {
                             if (!String.IsNullOrEmpty(repo.backupFrequency))
                             {
                                 CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.backupFrequency);
-                                TimeZoneInfo easternTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
 
-                                DateTime now = DateTime.Now;
-                                //DateTime now = TimeZoneInfo.ConvertTimeFromUtc(now1, easternTimeZone);
-                                DateTime dt = crontabSchedule.GetNextOccurrence(now);
-                                TimeSpan nextRunJobspan = nextRunSoonest.Subtract(now);
+                                DateTime now = Utils.getDBDateNow();
+                                DateTime dt = crontabSchedule.GetNextOccurrence(DateTime.Now);
+                                TimeSpan nextRunJobspan = nextRunSoonest.Subtract(DateTime.Now);
                                 int totalMinLeft = ((int)nextRunJobspan.TotalMinutes);
+                                TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
+                                TimeSpan lastSyncSpan = now.Subtract(repo.lastSyncDate);
+
+                                if (lastSyncSpan.TotalMinutes < 15 || lastBackupSpan.TotalMinutes < 15)
+                                {
+                                    // HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skip {repo.FullName} lastSyncSpan.TotalMinutes:{lastSyncSpan.TotalMinutes} lastBackupSpan.TotalMinutes:{lastBackupSpan.TotalMinutes}");
+                                    continue;
+                                }
 
                                 if (totalMinLeft >= 0 && nextRunJobspan.TotalMinutes < .5)
                                 {
-                                    GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker(this.GITHUB_PAT_Token, this.GITHUB_OrgName, this.customerGuid, this.googleBucketName, repo);
-                                    if (!ThreadUtilsV2.Instance.isGitWorkerInQueue(gitHubArchiveWorker.ToString()))
+
+                                    //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"loading {repo.FullName} lastSyncSpan.TotalMinutes:{lastSyncSpan.TotalMinutes} lastBackupSpan.TotalMinutes:{lastBackupSpan.TotalMinutes}");
+                                    
+                                    if (!ThreadUtilsV2.Instance.isGitWorkerInQueue(repo.FullName))
                                     {
-                                        if (queuedSuccess)
-                                            ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
-                                        else
-                                            queuedSuccess = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
-                                        Thread.Sleep(50);
+                                        GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker(this.GITHUB_PAT_Token, this.GITHUB_OrgName, this.customerGuid, this.googleBucketName, repo);
+                                        repoListRefreshTime = DateTime.Now;
+                                        repo.lastSyncDate = DateTime.Now;
+
+                                        bool success = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
+
+                                        if (!queuedSuccess)
+                                            queuedSuccess = success;
+                                        //Thread.Sleep(50);
                                     }
                                 }
                             }
                         }
-                        if (queuedSuccess)
-                            repoListRefreshTime = DateTime.MinValue;
+                        //if (queuedSuccess)
+                        //repoListRefreshTime = DateTime.Now;
                     }
                 }
 

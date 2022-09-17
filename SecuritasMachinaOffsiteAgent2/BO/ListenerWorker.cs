@@ -256,6 +256,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 }
 
 
+            }catch(Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
             }
             finally
             {
@@ -267,8 +270,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
         }
         private void scanStageWorkerOnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
+            System.Timers.Timer tmpTimer = (System.Timers.Timer)source;
+            tmpTimer.Enabled = false;
             ScanStageDirWorker scanStageDirWorker = new ScanStageDirWorker();
             scanStageDirWorker.StartAsync();
+            tmpTimer.Enabled = true;
         }
         private void scanGitHubWorkerTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {

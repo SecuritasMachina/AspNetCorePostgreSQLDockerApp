@@ -46,21 +46,22 @@ namespace SecuritasMachinaOffsiteAgent.BO
         }
         internal bool isInQueue(string pBackupWorkerName)
         {
-            bool ret = true;
-            if (!dtBackupWorker.ContainsKey(pBackupWorkerName))
-            {
-                ret = false;
-            }
-
+            bool ret = dtBackupWorker.ContainsKey(pBackupWorkerName);
             return ret;
         }
         internal bool isGitWorkerInQueue(string pBackupWorkerName)
         {
             bool ret = false;
-            if (dtGitHubWorker.ContainsKey(pBackupWorkerName))
-            {
-                ret = true;
-            }
+            lock (dtGitHubWorker)
+                ret = dtGitHubWorker.ContainsKey(pBackupWorkerName);
+
+            return ret;
+        }
+        internal bool addToGitWorkerQueue(GitHubArchiveWorker gitHubArchiveWorker)
+        {
+            bool ret = false;
+            lock (dtGitHubWorker)
+                ret = dtGitHubWorker.TryAdd(gitHubArchiveWorker.ToString(), gitHubArchiveWorker);
 
             return ret;
         }
@@ -68,8 +69,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
         {
             bool ret = false;
             GitHubArchiveWorker tmp = null;
-
-            ret = dtGitHubWorker.TryRemove(key, out tmp);
+            lock (dtGitHubWorker)
+                ret = dtGitHubWorker.TryRemove(key, out tmp);
             return ret;
         }
         internal void addToBackupWorkerQueue(BackupWorker backupWorker)
@@ -155,7 +156,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 timeDiff = DateTime.Now - start;
 
             }
-            start = DateTime.Now;
             string backWorkerName = backupWorker.ToString();
             bool tmpBool = false;
             //lock (dtGitHubWorker)
@@ -164,10 +164,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
             if (!tmpBool)
             {
                 bool addSuccess = false;
-                lock (dtGitHubWorker)
-                    addSuccess = dtGitHubWorker.TryAdd(backWorkerName, backupWorker);
+                addSuccess = addToGitWorkerQueue(backupWorker);
+                
                 if (addSuccess)
                 {
+                    
                     ThreadPool.QueueUserWorkItem(async x =>
                     {
                         QueuedSuccess = await backupWorker.StartAsync();
@@ -198,5 +199,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         }
 
+        internal int getGitQueueSize()
+        {
+            int ret = 0;
+            lock (dtGitHubWorker)
+                ret = dtGitHubWorker.Count;
+            return ret;
+        }
     }
 }

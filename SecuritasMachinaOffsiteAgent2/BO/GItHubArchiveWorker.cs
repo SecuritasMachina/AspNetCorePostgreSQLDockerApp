@@ -40,31 +40,14 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
                 if (!String.IsNullOrEmpty(repo.backupFrequency))
                 {
-                    CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.backupFrequency);
-                    TimeZoneInfo easternTimeZone = TimeZoneInfo.FindSystemTimeZoneById("Eastern Standard Time");
-
-                    DateTime now1 = DateTime.UtcNow;
-                    DateTime now = TimeZoneInfo.ConvertTimeFromUtc(now1,easternTimeZone);
-                    DateTime dt = crontabSchedule.GetNextOccurrence(now);
-                    
-                    //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"{repo.FullName} Will run: {dt.ToString()}  ");
-                    TimeSpan nextRunJobspan = dt.Subtract(now);
+                    DateTime now = Utils.getDBDateNow();
                     TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
-                    TimeSpan lastSyncSpan = now.Subtract(repo.lastSyncDate);
-
-                    if (lastSyncSpan.TotalMinutes < 15 || lastBackupSpan.TotalMinutes < 15)
-                    {
-                        return false;
-                    }
-
-                    if (((int)nextRunJobspan.TotalMinutes) > 1)
-                        return false;
-
 
                     //Clone, then zip and store in google
                     string path = $"{RunTimeSettings.DATAPATH}/Repos/{repo.FullName}";
                     DirectoryInfo di = new DirectoryInfo(path);
                     int retVal = 0;
+                    repo.lastSyncDate = Utils.getDBDateNow();
                     if (!Directory.Exists(path))
                     {
                         HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Mirroring {repo.Url} in {path}");
@@ -84,7 +67,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                     if (retVal == 0 && lastBackupSpan.TotalHours > 4)
                     {
-                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "DEBUG", $"Debug lastBackupSpan.TotalHours:{lastBackupSpan.TotalHours} while Syncing {repo.FullName}");
+                        repo.lastBackupDate = Utils.getDBDateNow();
+                        repo.lastSyncDate = Utils.getDBDateNow();
+                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Debug lastBackupSpan.TotalHours:{lastBackupSpan.TotalHours} while Syncing {repo.FullName}");
                         int generationCount = 1;
                         StorageClient googleClient = StorageClient.Create();
 
@@ -113,12 +98,16 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         ZipFile.CreateFromDirectory(path, zipName);
                         Utils.writeFileToGoogle(RunTimeSettings.customerAgentAuthKey, "application/zip", googleBucketName, basebackupName + ".zip", zipName, RunTimeSettings.envPassPhrase);
                         HTTPUtils.Instance.touchRepoLastBackup(RunTimeSettings.customerAgentAuthKey, repo);
+                        HTTPUtils.Instance.touchRepoLastSync(RunTimeSettings.customerAgentAuthKey, repo);
+                        repo.lastBackupDate = Utils.getDBDateNow();
+                        repo.lastSyncDate = Utils.getDBDateNow();
                         HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "BACKUP-END", "Completed encryption, synced and archived : " + basebackupName);
 
                     }
                     else
                     {
                         HTTPUtils.Instance.touchRepoLastSync(RunTimeSettings.customerAgentAuthKey, repo);
+                        repo.lastSyncDate = Utils.getDBDateNow();
                         HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "SYNC-END", "Completed sync: " + repo.FullName);
                     }
 

@@ -40,14 +40,14 @@ namespace Common.Utils.Comm
 
             if (aTimer == null)
             {
-                Console.WriteLine(" Creating TImer ");
+                //Console.WriteLine(" Creating TImer ");
                 aTimer = new Timer(new TimerCallback(TimerProc));
                 lock (aTimer)
                     aTimer.Change(5 * 1000, Timeout.Infinite);
             }
 
         }
-        
+
         public async Task postMsg2ControllerAsync(string? nameSpace, string? pAuthKey, string? messageType, string? json)
         {
             // Console.WriteLine($"nameSpace:{nameSpace} messageType:{messageType} RunTimeSettings.sbrootConnectionString {RunTimeSettings.sbrootConnectionString}");
@@ -74,8 +74,8 @@ namespace Common.Utils.Comm
                 genericMessage.msg = json;
                 genericMessage.timeStamp = new DateTimeOffset(DateTime.UtcNow).ToUniversalTime().ToUnixTimeMilliseconds();
                 genericMessage.authKey = RunTimeSettings.authKey;
-                
-                serviceBusMessages.Add(new ServiceBusMessage(JsonConvert.SerializeObject(genericMessage)));
+                lock (serviceBusMessages)
+                    serviceBusMessages.Add(new ServiceBusMessage(JsonConvert.SerializeObject(genericMessage)));
                 //TimeSpan span2 = DateTime.Now.Subtract(startTime);
 
                 if (serviceBusMessages.Count > 100)//Something very wrong happened
@@ -103,6 +103,7 @@ namespace Common.Utils.Comm
         }
         private static async void TimerProc(object state)
         {
+
             ServiceBusMessage[] tmpArr = StaticUtils.ToArraySafe(serviceBusMessages);
             if (tmpArr.Length > 0)
             {
@@ -110,10 +111,11 @@ namespace Common.Utils.Comm
                     client = new ServiceBusClient(RunTimeSettings.sbrootConnectionString);
                 if (sender == null)
                     sender = client.CreateSender("coordinator");
-                
+
                 await sender.SendMessagesAsync(tmpArr);
                 //Console.WriteLine(Thread.CurrentThread.ManagedThreadId + " " + serviceBusMessages.Count + " messages sent by timer ");
-                serviceBusMessages.Clear();
+                lock (serviceBusMessages)
+                    serviceBusMessages.Clear();
             }
 
             //startTime = DateTime.Now;
