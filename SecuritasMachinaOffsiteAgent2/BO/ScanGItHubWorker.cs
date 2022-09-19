@@ -16,8 +16,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
         private string GITHUB_PAT_Token;
         private string GITHUB_OrgName;
         private static DateTime cacheRefreshTime;
-        private static DateTime repoListRefreshTime;
-        private static string repoListMsg;
         private static List<RepoDTO> _RepoDTOs;
         private bool _isBusy = false;
 
@@ -28,7 +26,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             this.customerGuid = customerGuid;
             this.googleBucketName = googleBucketName;
             cacheRefreshTime = DateTime.MinValue;
-            repoListRefreshTime = DateTime.MinValue;
+            //repoListRefreshTime = DateTime.MinValue;
             _RepoDTOs = new List<RepoDTO>();
         }
 
@@ -79,63 +77,46 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
 
                 }
-                if (repoListRefreshTime.AddMinutes(6) < DateTime.Now)
+
+                _RepoDTOs = HTTPUtils.Instance.getRepoList(RunTimeSettings.customerAgentAuthKey);
+                //Loop through and run any crons
+                bool queuedSuccess = false;
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Checking {_RepoDTOs.Count} GitHub Repositories");
+                foreach (RepoDTO repo in _RepoDTOs.Where(i => !String.IsNullOrEmpty(i.backupFrequency)))
                 {
-                    repoListRefreshTime = DateTime.Now;
-                    repoListMsg = HTTPUtils.Instance.getRepoList(RunTimeSettings.customerAgentAuthKey);
-                    _RepoDTOs = JsonConvert.DeserializeObject<List<RepoDTO>>(repoListMsg);
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Received {_RepoDTOs.Count} Repositories");
-                }
+                    CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.backupFrequency);
 
-                if (_RepoDTOs.Count > 0)
-                {
-                    //Loop through and run any crons
+                    DateTime now = Utils.getDBDateNow();
+                    TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
+                    TimeSpan lastSyncSpan = now.Subtract(repo.lastSyncDate);
 
-
-                    bool queuedSuccess = false;
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Checking for GitHub jobs to run");
-                    foreach (RepoDTO repo in _RepoDTOs.Where(i => !String.IsNullOrEmpty(i.backupFrequency)))
+                    if (lastSyncSpan.TotalHours < repo.syncMinimumHours)
                     {
-                        CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.backupFrequency);
-
-                        DateTime now = Utils.getDBDateNow();
-                        DateTime nextDate = crontabSchedule.GetNextOccurrence(DateTime.Now);
-                        TimeSpan nextRunJobspan = nextDate.Subtract(DateTime.Now);
-                        int totalMinLeft = ((int)nextRunJobspan.TotalMinutes);
-                        TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
-                        TimeSpan lastSyncSpan = now.Subtract(repo.lastSyncDate);
-
-                        if (lastSyncSpan.TotalHours < repo.syncMinimumHours && lastBackupSpan.TotalHours < repo.syncMinArchiveHours)
+                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skip {repo.FullName} last Sync @ {repo.lastSyncDate.ToString()}");
+                        continue;
+                    }
+                    if (lastBackupSpan.TotalHours < repo.syncMinArchiveHours)
+                    {
+                        if (lastSyncSpan.TotalHours < repo.syncMinimumHours)
                         {
-                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skip {repo.FullName} last Sync @ {repo.lastSyncDate.ToString()} last backup @ {repo.lastBackupDate.ToString()}");
+                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skip {repo.FullName} last backup @ {repo.lastBackupDate.ToString()}");
                             continue;
                         }
-
-                        if (nextRunJobspan.TotalMinutes < .5)
-                        {
-
-                            if (!ThreadUtilsV2.Instance.isGitWorkerInQueue(repo.FullName))
-                            {
-                                GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker(this.GITHUB_PAT_Token, this.GITHUB_OrgName, this.customerGuid, this.googleBucketName, repo);
-                                bool success = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
-                                if (success)
-                                {
-                                    repoListRefreshTime = DateTime.Now;
-                                    //repo.lastSyncDate = DateTime.Now;
-                                }
-                                if (!queuedSuccess)
-                                    queuedSuccess = success;
-                                //Thread.Sleep(50);
-                            }
-                        }
-                        else
-                        {
-                             HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skipping {repo.FullName} next run in: {nextRunJobspan.TotalMinutes} minute(s)");
-                        }
-
                     }
-                    _isBusy = false;
+
+                    if (!ThreadUtilsV2.Instance.isGitWorkerInQueue(repo.FullName))
+                    {
+                        GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker(this.GITHUB_PAT_Token, this.GITHUB_OrgName, this.customerGuid, this.googleBucketName, repo);
+                        bool success = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
+
+                        if (!queuedSuccess)
+                            queuedSuccess = success;
+                        Thread.Sleep(10);
+                    }
+
                 }
+                _isBusy = false;
+
 
             }
             catch (Exception ex)

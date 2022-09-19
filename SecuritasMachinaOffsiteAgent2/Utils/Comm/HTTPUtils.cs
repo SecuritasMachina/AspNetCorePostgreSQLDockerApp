@@ -132,19 +132,18 @@ namespace Common.Utils.Comm
             return ret;
         }
 
-        internal string getRepoList(string customerAuthKey)
+        internal List<RepoDTO> getRepoList(string customerAuthKey)
         {
-            string ret = "";
             try
             {
                 string url = "api/v3/repos/list";
 
                 HttpResponseMessage response = _client.GetAsync(url).Result;
                 response.EnsureSuccessStatusCode();
-                ret = response.Content.ReadAsStringAsync().Result;
+                return JsonConvert.DeserializeObject<List<RepoDTO>>(response.Content.ReadAsStringAsync().Result) ;
             }
             catch (Exception ignore) { }
-            return ret;
+            return new List<RepoDTO>();
         }
 
         internal void touchRepoLastSync(string? customerAgentAuthKey, RepoDTO repo)

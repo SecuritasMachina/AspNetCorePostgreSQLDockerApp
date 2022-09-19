@@ -209,7 +209,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 scanWorkerCrons = new ScanWorkerCrons();
                 Timer scanCronHubWorkerTimer = new Timer();
-                scanCronHubWorkerTimer.Interval = (1000 * 5);
+                scanCronHubWorkerTimer.Interval = (1000);
                 scanCronHubWorkerTimer.Elapsed += scanCronHubWorkerTimedEvent;
                 scanCronHubWorkerTimer.AutoReset = true; scanCronHubWorkerTimer.Enabled = true;
                 HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Started Cron Job Worker");
@@ -243,7 +243,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             tmpTimer.Enabled = false;
 
             this.scanWorkerCrons.StartAsync();
-            tmpTimer.Interval = (1000 * 20) + (new Random().Next(2000));
+            tmpTimer.Interval = (1000 * 10) ;
             tmpTimer.Enabled = true;
         }
 

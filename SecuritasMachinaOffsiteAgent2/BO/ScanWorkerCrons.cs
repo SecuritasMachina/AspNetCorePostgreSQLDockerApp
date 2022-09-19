@@ -34,7 +34,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             try
             {
 
-                if (jobCronsListTime.AddMinutes(6) < DateTime.Now)
+                if (jobCronsListTime.AddMinutes(5) < DateTime.Now)
                 {
                     jobCronsListTime = DateTime.Now;
                     _WorkerDTOs = HTTPUtils.Instance.getWorkerList(RunTimeSettings.customerAgentAuthKey);
@@ -63,11 +63,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         DateTime convertedDate = TimeZoneInfo.ConvertTimeFromUtc(utc, easternTimeZone);
 
                         int totalMinLeft = ((int)nextRunJobspan.TotalMinutes);
+                        int totalSecLeft = ((int)nextRunJobspan.TotalSeconds);
                         if (nextRunJobspan.TotalMinutes < 1)
-                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in less than a minute @ {String.Format("{0:g}", convertedDate)}");
+                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in less than {totalSecLeft} seconds @ {String.Format("{0:g}", convertedDate)}");
                         else
                             HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in {totalMinLeft + 1} minutes @ {String.Format("{0:g}", convertedDate)}");
-                        if (totalMinLeft >= 0 && nextRunJobspan.TotalMinutes < .5)
+                        if (totalMinLeft >= 0 && nextRunJobspan.TotalSeconds < 10)
                             runJobs = true;
                     }
 
