@@ -21,20 +21,18 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         BlobServiceClient? blobServiceClient = null;
         BlobContainerClient stagingContainerClient = null;
+        private bool _isBusy = false;
+
         public void StartAsync()
         {
-
-
-            //Console.Write("Testing Azure Blob Endpoint at " + RunTimeSettings.azureBlobEndpoint + " " + RunTimeSettings.azureBlobContainerName);
-
-           
+            _isBusy = true;
 
             if (blobServiceClient == null)
                 blobServiceClient = new BlobServiceClient(RunTimeSettings.azureBlobEndpoint);
             if (stagingContainerClient == null)
                 stagingContainerClient = blobServiceClient.GetBlobContainerClient(RunTimeSettings.azureSourceBlobContainerName);
 
-            DirListingDTO agentDirList = Utils.doDirListing(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName);
+            DirListingDTO agentDirList = Utils.doDirListing(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleArchiveBucketName);
 
             DirListingDTO stagingContainerDirListingDTO1 =  Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync()).Result;
 
@@ -43,25 +41,22 @@ namespace SecuritasMachinaOffsiteAgent.BO
             DirListingDTO restoredListingDTO = Utils.doDirListingAsync(restoredContainerName.GetBlobsAsync()).Result;
 
             StatusDTO statusDTO = new StatusDTO();
-            //statusDTO.activeJobs = ThreadUtils.getActiveThreads();
             statusDTO.activeThreads = (long)Process.GetCurrentProcess().Threads.Count;
             statusDTO.UserProcessorTime = Process.GetCurrentProcess().UserProcessorTime.Ticks;
             statusDTO.TotalProcessorTime = Process.GetCurrentProcess().TotalProcessorTime.Ticks;
             statusDTO.WorkingSet64 = Process.GetCurrentProcess().WorkingSet64;
             statusDTO.TotalMemory = System.GC.GetTotalMemory(false);
-            // PerformanceCounter ramCounter = new PerformanceCounter("Memory", "Available Bytes");
-            // statusDTO.TotalMemory = (long)ramCounter.NextValue() ;
             statusDTO.AgentFileDTOs = agentDirList.fileDTOs;
             statusDTO.StagingFileDTOs = stagingContainerDirListingDTO1.fileDTOs;
             statusDTO.RestoredListingDTO = restoredListingDTO.fileDTOs;
-
-
             ServiceBusUtils.Instance.postMsg2ControllerAsync("agent/status", RunTimeSettings.customerAgentAuthKey, "status", JsonConvert.SerializeObject(statusDTO));
-            // Thread.Sleep(1 * 60 * 1000 * RunTimeSettings.PollBaseTime);
-
+            _isBusy = false;
 
         }
 
-
+        internal bool isBusy()
+        {
+            return _isBusy;
+        }
     }
 }

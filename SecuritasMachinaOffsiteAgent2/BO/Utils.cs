@@ -149,8 +149,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                              p =>
                              {
                                  DateTime end = DateTime.Now;
-                                 var result = end.Subtract(start).TotalMinutes;
-                                 if (result >= 1)
+                                 var result = end.Subtract(start).TotalSeconds;
+                                 if (result >= 10)
                                  {
                                      int percentComplete = (int)Math.Round((double)(100 * p.BytesSent) / (double)pContentLength);
                                      HTTPUtils.Instance.writeToLogAsync(pCustomerGuid, "BACKUP-UPDATE", $"Backup {pBaseFileName} is {percentComplete}% complete");
@@ -268,7 +268,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     RedirectStandardError = true,
                     StandardErrorEncoding = Encoding.UTF8,
                     WorkingDirectory = workingDir,
-                    FileName = command.Substring(0,command.IndexOf(" ")),
+                    FileName = command.Substring(0, command.IndexOf(" ")),
                     Arguments = " " + command.Substring(command.IndexOf(" "))
                 };
                 //,                
@@ -317,7 +317,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 // Add the text to the collected output.
                 //cmdOutput.Append(Environment.NewLine +
-                 //   $"[{numOutputLines}] - {outLine.Data}");
+                //   $"[{numOutputLines}] - {outLine.Data}");
                 HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"[{numOutputLines}] - {outLine.Data}");
             }
         }
@@ -331,12 +331,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 // Add the text to the collected output.
                 //cmdOutput.Append(Environment.NewLine +
-               //     $"[{numOutputLines}] - {outLine.Data}");
+                //     $"[{numOutputLines}] - {outLine.Data}");
                 HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"[{numOutputLines}] - {outLine.Data}");
             }
         }
 
-        internal static void writeFileToGoogle(string _customerGuid, string contentType, string _googleBucketName,string pBaseBackupName,  string outFileName, string _passPhrase)
+        internal static void writeFileToGoogle(string _customerGuid, string contentType, string _googleBucketName, string pBaseBackupName, string outFileName, string _passPhrase)
         {
             try
             {
@@ -353,11 +353,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 HTTPUtils.Instance.writeBackupHistory(_customerGuid, pBaseBackupName, _backupName, (long)outFileProperties.Size, startTimeStamp);
                 //
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
 
             }
-            
+
             //throw new NotImplementedException();
         }
     }

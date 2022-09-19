@@ -153,18 +153,14 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 if (tCount > 0)
                     HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Throttling GitHubWorkerQueue {tCount} of Max Threads {RunTimeSettings.MaxThreads} Active Threads: {tmp}");
 
-                timeDiff = DateTime.Now - start;
+                //timeDiff = DateTime.Now - start;
 
             }
             string backWorkerName = repoSyncWorker.ToString();
-            bool tmpBool = isGitWorkerInQueue(backWorkerName);
 
-            if (!tmpBool)
+            if (!isGitWorkerInQueue(backWorkerName))
             {
-                bool addSuccess = false;
-                addSuccess = addToGitWorkerQueue(repoSyncWorker);
-
-                if (addSuccess)
+                if (addToGitWorkerQueue(repoSyncWorker))
                 {
 
                     ThreadPool.QueueUserWorkItem(async x =>

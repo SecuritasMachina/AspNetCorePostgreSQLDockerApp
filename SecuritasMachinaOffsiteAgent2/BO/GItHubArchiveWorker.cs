@@ -64,9 +64,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
                 if (retVal == 0 && lastBackupSpan.TotalHours > repo.syncMinArchiveHours)
                 {
-                    repo.lastBackupDate = Utils.getDBDateNow();
+                    
                     //repo.lastSyncDate = Utils.getDBDateNow();
                     HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Debug lastBackupSpan.TotalHours:{lastBackupSpan.TotalHours} while Syncing {repo.FullName}");
+                    repo.lastBackupDate = Utils.getDBDateNow();
                     int generationCount = 1;
                     StorageClient googleClient = StorageClient.Create();
 
@@ -100,9 +101,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 }
                 else
                 {
-                    //repo.lastSyncDate = Utils.getDBDateNow();
                     HTTPUtils.Instance.touchRepoLastSync(RunTimeSettings.customerAgentAuthKey, repo);
-
                     HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "SYNC-END", "Completed sync: " + repo.FullName);
                 }
 

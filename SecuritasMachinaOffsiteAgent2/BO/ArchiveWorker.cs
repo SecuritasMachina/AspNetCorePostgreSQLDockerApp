@@ -12,6 +12,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         private string googleBucketName;
         private string authtoken;
+        private bool _isBusy = false;
 
         public ArchiveWorker(string pAuthkey, string inPath, int retentionDays)
         {
@@ -24,13 +25,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         public void StartAsync()
         {
-        
+            _isBusy = true;
             DateTime purgeOlderDate = DateTime.Now.AddDays(retentionDays * -1);
 
             HTTPUtils.Instance.writeToLogAsync(this.authtoken, "INFO", $"Scanning {googleBucketName} for Last Write Time over {retentionDays} days old ({purgeOlderDate.ToShortDateString()})");
 
             DirListingDTO dirListingDTO = CloudUtils.Instance.listFiles(googleBucketName);
-           
 
             try
             {
@@ -39,7 +39,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 {
                     if (file.lastWriteDateTime < purgeOlderDate)
                     {
-                        
                         HTTPUtils.Instance.writeToLogAsync(this.authtoken, "DELETING", file.FileName);
                         CloudUtils.Instance.deleteFile(googleBucketName, file.FileName);
                         filesDeleted = true;
@@ -47,18 +46,20 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 }
                 if (filesDeleted)
-                    Utils.UpdateOffsiteBytes(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName);
+                    Utils.UpdateOffsiteBytes(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleArchiveBucketName);
             }
             catch (Exception ex)
             {
                 HTTPUtils.Instance.writeToLogAsync(this.authtoken, "ERROR", googleBucketName + " ArchiveWorker: " + ex.ToString());
 
             }
+            _isBusy = false;
             //Thread.Sleep(6 * 60 * 60 * 1000 * RunTimeSettings.PollBaseTime);
         }
 
-
-
-
+        internal bool isBusy()
+        {
+            return _isBusy;
+        }
     }
 }

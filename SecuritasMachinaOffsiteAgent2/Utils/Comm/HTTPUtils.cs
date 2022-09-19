@@ -91,13 +91,13 @@ namespace Common.Utils.Comm
 
         public async Task writeToLogAsync(string? pAuthKey, string? messageType, string? json)
         {
-           
+
             await ServiceBusUtils.Instance.postMsg2ControllerAsync("agent/logs", pAuthKey, messageType, json);
         }
         public void writeBackupHistory(string? guid, string? backupFile, string newFileName, long fileLength, long startTimeStamp)
         {
 
-           
+
             BackupHistoryDTO backupHistoryDTO = new BackupHistoryDTO();
             backupHistoryDTO.startTimeStamp = startTimeStamp;
             backupHistoryDTO.backupFile = backupFile;
@@ -108,7 +108,7 @@ namespace Common.Utils.Comm
         }
         public void touchRepoLastBackup(string? guid, RepoDTO? repoDTO)
         {
-            
+
             ServiceBusUtils.Instance.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAgentAuthKey, "updateRepoBackupStatus", JsonConvert.SerializeObject(repoDTO));
         }
         public void putCache(string topiccustomerGuid, string messageType, string json)
@@ -138,7 +138,7 @@ namespace Common.Utils.Comm
             try
             {
                 string url = "api/v3/repos/list";
-                
+
                 HttpResponseMessage response = _client.GetAsync(url).Result;
                 response.EnsureSuccessStatusCode();
                 ret = response.Content.ReadAsStringAsync().Result;
@@ -152,19 +152,19 @@ namespace Common.Utils.Comm
             ServiceBusUtils.Instance.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAgentAuthKey, "touchRepoLastSync", JsonConvert.SerializeObject(repo));
         }
 
-        internal string getWorkerList(string? customerAgentAuthKey)
+        internal List<JobDTO> getWorkerList(string? customerAgentAuthKey)
         {
-            string ret = "";
             try
             {
                 string url = "api/v3/job/list";
 
                 HttpResponseMessage response = _client.GetAsync(url).Result;
                 response.EnsureSuccessStatusCode();
-                ret = response.Content.ReadAsStringAsync().Result;
+                
+                return JsonConvert.DeserializeObject<List<JobDTO>>(response.Content.ReadAsStringAsync().Result);
             }
             catch (Exception ignore) { }
-            return ret;
+            return new List<JobDTO>();
         }
     }
 }

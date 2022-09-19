@@ -13,7 +13,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
     {
         private static DateTime jobCronsListTime;
         private static List<JobDTO> _WorkerDTOs;
-        
+        private ScanGitHubWorker scanGitHubWorker = new ScanGitHubWorker(RunTimeSettings.GITHUB_PAT_Token, RunTimeSettings.GITHUB_OrgName, RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleArchiveBucketName);
+        private ArchiveWorker archiveWorker = new ArchiveWorker(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleArchiveBucketName, RunTimeSettings.RetentionDays);
+        private StatusWorker statusWorker = new StatusWorker();
+        private UpdateOffSiteBytesWorker updateOffSiteBytesWorker = new UpdateOffSiteBytesWorker(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleArchiveBucketName, RunTimeSettings.RetentionDays);
+        private ScanStageDirWorker scanStageDirWorker = new ScanStageDirWorker();
+
         public ScanWorkerCrons()
         {
             jobCronsListTime = DateTime.MinValue;
@@ -23,44 +28,31 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         public async Task StartAsync()
         {
-            ScanGitHubWorker scanGitHubWorker = new ScanGitHubWorker(RunTimeSettings.GITHUB_PAT_Token, RunTimeSettings.GITHUB_OrgName, RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName);
-            ArchiveWorker archiveWorker = new ArchiveWorker(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName, RunTimeSettings.RetentionDays);
-            StatusWorker statusWorker = new StatusWorker();
-            UpdateOffSiteBytesWorker updateOffSiteBytesWorker = new UpdateOffSiteBytesWorker(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleStorageBucketName, RunTimeSettings.RetentionDays);
-            ScanStageDirWorker scanStageDirWorker = new ScanStageDirWorker();
+
 
             GenericMessage genericMessage = new GenericMessage();
             try
             {
-                
+
                 if (jobCronsListTime.AddMinutes(6) < DateTime.Now)
                 {
                     jobCronsListTime = DateTime.Now;
-                    //repoListMsg = HTTPUtils.Instance.getRepoList(RunTimeSettings.customerAgentAuthKey);
-                    _WorkerDTOs = JsonConvert.DeserializeObject<List<JobDTO>>(HTTPUtils.Instance.getWorkerList(RunTimeSettings.customerAgentAuthKey));
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Received {_WorkerDTOs.Count} Repositories");
+                    _WorkerDTOs = HTTPUtils.Instance.getWorkerList(RunTimeSettings.customerAgentAuthKey);
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Received {_WorkerDTOs.Count} workers");
                 }
-                int qSize = ThreadUtilsV2.Instance.getGitQueueSize();
-                if (qSize > 0)
-                {
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Waiting for {qSize} threads to finish");
-                    return;
-                }
+
                 if (_WorkerDTOs.Count > 0)
                 {
                     //Loop through and run any crons
 
                     DateTime nextRunSoonest = DateTime.MaxValue;
-                    foreach (JobDTO repo in _WorkerDTOs)
+                    foreach (JobDTO repo in _WorkerDTOs.Where(i => !String.IsNullOrEmpty(i.cronSpec)))
                     {
-                        if (!String.IsNullOrEmpty(repo.cronSpec))
-                        {
-                            CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.cronSpec);
+                        CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.cronSpec);
 
-                            DateTime dt = crontabSchedule.GetNextOccurrence(DateTime.Now);
-                            if (dt < nextRunSoonest)
-                                nextRunSoonest = dt;
-                        }
+                        DateTime dt = crontabSchedule.GetNextOccurrence(DateTime.Now);
+                        if (dt < nextRunSoonest)
+                            nextRunSoonest = dt;
                     }
                     bool runJobs = false;
                     if (nextRunSoonest < DateTime.MaxValue)
@@ -83,29 +75,27 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     {
                         bool queuedSuccess = false;
                         HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Checking for jobs to run");
-                        foreach (JobDTO jobDTO in _WorkerDTOs)
+                        foreach (JobDTO jobDTO in _WorkerDTOs.Where(i => !String.IsNullOrEmpty(i.cronSpec)))
                         {
-                            if (!String.IsNullOrEmpty(jobDTO.cronSpec))
-                            {
-                                CrontabSchedule crontabSchedule = CrontabSchedule.Parse(jobDTO.cronSpec);
+                            CrontabSchedule crontabSchedule = CrontabSchedule.Parse(jobDTO.cronSpec);
 
-                                DateTime now = Utils.getDBDateNow();
-                                DateTime nextDate = crontabSchedule.GetNextOccurrence(DateTime.Now);
-                                TimeSpan nextRunJobspan = nextDate.Subtract(DateTime.Now);
-                                int totalMinLeft = ((int)nextRunJobspan.TotalMinutes);
-                                if (nextRunJobspan.TotalMinutes < .5)
-                                {
-                                    if (jobDTO.workerName.Contains("ScanGitHubWorker"))
-                                        scanGitHubWorker.StartAsync();
-                                    if (jobDTO.workerName.Contains("ArchiveWorker"))
-                                        archiveWorker.StartAsync();
-                                    if (jobDTO.workerName.Contains("StatusWorker"))
-                                        statusWorker.StartAsync();
-                                    if (jobDTO.workerName.Contains("UpdateOffSiteBytesWorker"))
-                                        updateOffSiteBytesWorker.StartAsync();
-                                    if (jobDTO.workerName.Contains("ScanStageDirWorker"))
-                                        scanStageDirWorker.StartAsync();
-                                }
+                            DateTime now = Utils.getDBDateNow();
+                            DateTime nextDate = crontabSchedule.GetNextOccurrence(DateTime.Now);
+                            TimeSpan nextRunJobspan = nextDate.Subtract(DateTime.Now);
+                            int totalMinLeft = ((int)nextRunJobspan.TotalMinutes);
+                            if (nextRunJobspan.TotalMinutes < .5)
+                            {
+                                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Checking {jobDTO.workerName} @ {jobDTO.cronSpec}");
+                                if (String.Equals(jobDTO.workerName, "ScanGitHubWorker", StringComparison.OrdinalIgnoreCase) && !scanGitHubWorker.isBusy())
+                                    scanGitHubWorker.StartAsync();
+                                if (String.Equals(jobDTO.workerName, "ArchiveWorker", StringComparison.OrdinalIgnoreCase) && !archiveWorker.isBusy())
+                                    archiveWorker.StartAsync();
+                                if (String.Equals(jobDTO.workerName, "StatusWorker", StringComparison.OrdinalIgnoreCase) && !statusWorker.isBusy())
+                                    statusWorker.StartAsync();
+                                if (String.Equals(jobDTO.workerName, "UpdateOffSiteBytesWorker", StringComparison.OrdinalIgnoreCase) && !updateOffSiteBytesWorker.isBusy())
+                                    updateOffSiteBytesWorker.StartAsync();
+                                if (String.Equals(jobDTO.workerName, "ScanStageDirWorker", StringComparison.OrdinalIgnoreCase) && !scanStageDirWorker.isBusy())
+                                    scanStageDirWorker.StartAsync();
                             }
                         }
                         //if (queuedSuccess)

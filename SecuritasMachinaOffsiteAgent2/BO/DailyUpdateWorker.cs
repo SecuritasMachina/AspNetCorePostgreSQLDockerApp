@@ -11,6 +11,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         private string inPath;
         private string customerGuid;
+        private bool _isBusy;
 
         public UpdateOffSiteBytesWorker(string customerGuid, string inPath, int retentionDays)
         {
@@ -23,15 +24,14 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         public void StartAsync()
         {
-           
-
-
+            _isBusy = true;
             Utils.UpdateOffsiteBytes(this.customerGuid, inPath);
-
-            //Thread.Sleep(1 * 60 * 60 * 1000 * RunTimeSettings.PollBaseTime);
-
+            _isBusy = false;
         }
 
-
+        internal bool isBusy()
+        {
+            return _isBusy;
+        }
     }
 }

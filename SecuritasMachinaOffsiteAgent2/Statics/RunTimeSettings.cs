@@ -26,7 +26,7 @@ namespace Common.Statics
         internal static int RetentionDays;
         
         internal static string? serviceBusTopic;
-        internal static string? GoogleStorageBucketName;
+        internal static string? GoogleArchiveBucketName;
         internal static int MaxThreads;
         
         internal static string? encryptionPassPhrase;
