@@ -40,7 +40,6 @@ namespace Common.Utils.Comm
 
             if (aTimer == null)
             {
-                //Console.WriteLine(" Creating TImer ");
                 aTimer = new Timer(new TimerCallback(TimerProc));
                 lock (aTimer)
                     aTimer.Change(5 * 1000, Timeout.Infinite);
@@ -58,13 +57,14 @@ namespace Common.Utils.Comm
                 if (sender == null)
                     sender = client.CreateSender("coordinator");
 
-                if (aTimer == null)
-                {
-                    //Console.WriteLine(" Creating TImer ");
-                    aTimer = new Timer(new TimerCallback(TimerProc));
-                    lock (aTimer)
+                lock (aTimer)
+                    if (aTimer == null)
+                    {
+                        //Console.WriteLine(" Creating TImer ");
+                        aTimer = new Timer(new TimerCallback(TimerProc));
+
                         aTimer.Change(5 * 1000, Timeout.Infinite);
-                }
+                    }
 
 
                 GenericMessage genericMessage = new GenericMessage();
@@ -83,7 +83,8 @@ namespace Common.Utils.Comm
                     ServiceBusMessage[] tmpArr = StaticUtils.ToArraySafe(serviceBusMessages);
                     await sender.SendMessagesAsync(tmpArr);
                     Console.WriteLine(serviceBusMessages.Count + " messages sent by Count ");
-                    serviceBusMessages.Clear();
+                    lock (serviceBusMessages)
+                        serviceBusMessages.Clear();
                     //startTime = DateTime.Now;
                     lock (aTimer)
                         if (aTimer != null)
@@ -117,11 +118,6 @@ namespace Common.Utils.Comm
                 lock (serviceBusMessages)
                     serviceBusMessages.Clear();
             }
-
-            //startTime = DateTime.Now;
-            // The state object is the Timer object.
-            //var t = (Timer)state;
-
             lock (aTimer)
                 aTimer.Change(5 * 1000, Timeout.Infinite);
         }

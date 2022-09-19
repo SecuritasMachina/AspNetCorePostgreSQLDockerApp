@@ -134,7 +134,7 @@ namespace Common.Utils.Comm
 
         internal string getRepoList(string customerAuthKey)
         {
-            string ret = null;
+            string ret = "";
             try
             {
                 string url = "api/v3/repos/list";
@@ -150,6 +150,21 @@ namespace Common.Utils.Comm
         internal void touchRepoLastSync(string? customerAgentAuthKey, RepoDTO repo)
         {
             ServiceBusUtils.Instance.postMsg2ControllerAsync("agent/backupHistory", RunTimeSettings.customerAgentAuthKey, "touchRepoLastSync", JsonConvert.SerializeObject(repo));
+        }
+
+        internal string getWorkerList(string? customerAgentAuthKey)
+        {
+            string ret = "";
+            try
+            {
+                string url = "api/v3/job/list";
+
+                HttpResponseMessage response = _client.GetAsync(url).Result;
+                response.EnsureSuccessStatusCode();
+                ret = response.Content.ReadAsStringAsync().Result;
+            }
+            catch (Exception ignore) { }
+            return ret;
         }
     }
 }

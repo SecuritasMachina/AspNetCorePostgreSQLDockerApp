@@ -18,5 +18,7 @@ namespace Common.DTO.V2
         public DateTime lastBackupDate { get; set; }
         public string id { get; set; }
         public DateTime lastSyncDate { get; set; }
+        public int syncMinimumHours { get; set; }
+        public int syncMinArchiveHours { get; set; }
     }
 }

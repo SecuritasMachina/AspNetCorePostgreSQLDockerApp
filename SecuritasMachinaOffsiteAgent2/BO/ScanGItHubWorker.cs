@@ -33,7 +33,17 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         public async Task StartAsync()
         {
-            //List<RepoDTO> repoDTOs = new List<RepoDTO>();
+            if (!String.IsNullOrEmpty(RunTimeSettings.GITHUB_PAT_Token))
+            {
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"GITHUB_PAT_Token is not defined, skipping GitHub");
+                return;
+            }
+            int qSize = ThreadUtilsV2.Instance.getGitQueueSize();
+            if (qSize > 0)
+            {
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Waiting for {qSize} threads to finish");
+                return;
+            }
             GenericMessage genericMessage = new GenericMessage();
             try
             {
@@ -73,12 +83,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     _RepoDTOs = JsonConvert.DeserializeObject<List<RepoDTO>>(repoListMsg);
                     HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Received {_RepoDTOs.Count} Repositories");
                 }
-                int qSize = ThreadUtilsV2.Instance.getGitQueueSize();
-                if (qSize > 0)
-                {
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Waiting for {qSize} threads to finish");
-                    return;
-                }
+                
                 if (_RepoDTOs.Count > 0)
                 {
                     //Loop through and run any crons
@@ -129,7 +134,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                 TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
                                 TimeSpan lastSyncSpan = now.Subtract(repo.lastSyncDate);
 
-                                if (lastSyncSpan.TotalMinutes < 15 || lastBackupSpan.TotalMinutes < 15)
+                                if (lastSyncSpan.TotalHours < repo.syncMinimumHours && lastBackupSpan.TotalHours < repo.syncMinArchiveHours)
                                 {
                                     // HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skip {repo.FullName} lastSyncSpan.TotalMinutes:{lastSyncSpan.TotalMinutes} lastBackupSpan.TotalMinutes:{lastBackupSpan.TotalMinutes}");
                                     continue;
@@ -139,18 +144,15 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                 {
 
                                     //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"loading {repo.FullName} nextRunJobspan.TotalMinutes:{nextRunJobspan.TotalMinutes}");
-                                    
+
                                     if (!ThreadUtilsV2.Instance.isGitWorkerInQueue(repo.FullName))
                                     {
                                         GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker(this.GITHUB_PAT_Token, this.GITHUB_OrgName, this.customerGuid, this.googleBucketName, repo);
-                                        
-                                        
-
                                         bool success = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
                                         if (success)
                                         {
                                             repoListRefreshTime = DateTime.Now;
-                                            repo.lastSyncDate = DateTime.Now;
+                                            //repo.lastSyncDate = DateTime.Now;
                                         }
                                         if (!queuedSuccess)
                                             queuedSuccess = success;
@@ -159,7 +161,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                                 }
                                 else
                                 {
-                                   // HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skipping {repo.FullName} nextRunJobspan.TotalMinutes:{nextRunJobspan.TotalMinutes}");
+                                    // HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skipping {repo.FullName} nextRunJobspan.TotalMinutes:{nextRunJobspan.TotalMinutes}");
                                 }
                             }
                         }

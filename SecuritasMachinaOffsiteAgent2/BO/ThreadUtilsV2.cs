@@ -119,7 +119,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
         }
 
-        internal bool addToGitHubWorkerQueue(GitHubArchiveWorker backupWorker)
+        internal bool addToGitHubWorkerQueue(GitHubArchiveWorker repoSyncWorker)
         {
 
             DateTime start = DateTime.Now;
@@ -138,7 +138,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             while (tCount >= RunTimeSettings.MaxThreads && timeDiff.TotalHours < 1)
             {
                 start = DateTime.Now;
-                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Throttling {backupWorker.ToString()} {tCount} of Max Threads {RunTimeSettings.MaxThreads} Active Threads: {tmp}");
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Throttling {repoSyncWorker.ToString()} {tCount} of Max Threads {RunTimeSettings.MaxThreads} Active Threads: {tmp}");
                 Thread.Sleep(5 * 1000);
                 tCount = 0;
                 tmp = "";
@@ -156,20 +156,20 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 timeDiff = DateTime.Now - start;
 
             }
-            string backWorkerName = backupWorker.ToString();
+            string backWorkerName = repoSyncWorker.ToString();
             bool tmpBool = isGitWorkerInQueue(backWorkerName);
 
             if (!tmpBool)
             {
                 bool addSuccess = false;
-                addSuccess = addToGitWorkerQueue(backupWorker);
+                addSuccess = addToGitWorkerQueue(repoSyncWorker);
 
                 if (addSuccess)
                 {
 
                     ThreadPool.QueueUserWorkItem(async x =>
                     {
-                        QueuedSuccess = await backupWorker.StartAsync();
+                        QueuedSuccess = await repoSyncWorker.StartAsync();
 
                         bool v = deleteGitWorkerFromQueue(backWorkerName);
                         if (!v)

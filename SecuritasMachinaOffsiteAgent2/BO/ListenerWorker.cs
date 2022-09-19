@@ -143,10 +143,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
 
 
-
-
-
-
             Console.Write("Testing delete at Google Storage Bucket Name: " + RunTimeSettings.GoogleStorageBucketName);
             try
             {
