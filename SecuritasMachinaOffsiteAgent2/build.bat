@@ -1,4 +1,5 @@
 docker build -t securitasmachinaoffsiteagent . --progress plain
+pause
 docker tag securitasmachinaoffsiteagent  securitasmachina2022/securitasmachinaoffsiteagent:latest
 docker push securitasmachina2022/securitasmachinaoffsiteagent:latest
 
