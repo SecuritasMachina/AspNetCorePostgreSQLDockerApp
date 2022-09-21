@@ -64,12 +64,15 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                         int totalMinLeft = ((int)nextRunJobspan.TotalMinutes);
                         int totalSecLeft = ((int)nextRunJobspan.TotalSeconds);
-                        if (nextRunJobspan.TotalMinutes < 1)
-                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in less than {totalSecLeft} seconds @ {String.Format("{0:g}", convertedDate)}");
-                        else
+                        if (nextRunJobspan.TotalMinutes > 1)
+                        {
                             HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in {totalMinLeft + 1} minutes @ {String.Format("{0:g}", convertedDate)}");
+                            return;
+                        }
                         if (totalMinLeft >= 0 && nextRunJobspan.TotalSeconds < 10)
                             runJobs = true;
+                        else
+                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Scan for jobs in less than a minute @ {String.Format("{0:g}", convertedDate)}");
                     }
 
                     if (runJobs)
