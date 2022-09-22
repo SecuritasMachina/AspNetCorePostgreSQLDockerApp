@@ -1,14 +1,6 @@
-﻿using ASquare.WindowsTaskScheduler.Models;
-using ASquare.WindowsTaskScheduler;
-using Common.DTO.V2;
+﻿using Common.DTO.V2;
 using Common.Statics;
 using Common.Utils.Comm;
-using NCrontab;
-using Newtonsoft.Json;
-using Octokit;
-using SecuritasMachinaOffsiteAgent.DTO.V2;
-using System.Diagnostics;
-using System.IO;
 using System.IO.Compression;
 using Google.Cloud.Storage.V1;
 

@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SecuritasMachinaOffsiteAgent.DTO.V2
+namespace Common.DTO.V2
 {
-    internal class JobDTO
+    public class JobDTO
     {
         public string workerName { get; set; }
         public string id { get; set; }

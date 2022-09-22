@@ -7,7 +7,7 @@ ENV DOTNET_EnableDiagnostics=1
 
 
 # Copy everything
-COPY .. ./
+COPY . ./
 # Restore as distinct layers
 #WORKDIR /SecuritasMachinaOffsiteAgent2
 RUN dotnet restore

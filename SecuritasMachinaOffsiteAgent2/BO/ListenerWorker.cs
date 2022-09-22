@@ -241,9 +241,11 @@ namespace SecuritasMachinaOffsiteAgent.BO
         {
             Timer tmpTimer = (System.Timers.Timer)source;
             tmpTimer.Enabled = false;
+            tmpTimer.AutoReset = false;
             tmpTimer.Interval= double.MaxValue;
             this.scanWorkerCrons.StartAsync();
             tmpTimer.Interval = (1000 * 10) ;
+            tmpTimer.AutoReset = true;
             tmpTimer.Enabled = true;
         }
 

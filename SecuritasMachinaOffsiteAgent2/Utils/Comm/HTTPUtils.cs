@@ -136,7 +136,7 @@ namespace Common.Utils.Comm
         {
             try
             {
-                string url = "api/v3/repos/list";
+                string url = "api/v3/repos";
 
                 HttpResponseMessage response = _client.GetAsync(url).Result;
                 response.EnsureSuccessStatusCode();
@@ -144,6 +144,19 @@ namespace Common.Utils.Comm
             }
             catch (Exception ignore) { }
             return new List<RepoDTO>();
+        }
+        internal List<CUSTOMERREPOS_DTO> getCustomerReposList(string customerAuthKey)
+        {
+            try
+            {
+                string url = "api/v3/customerRepos";
+
+                HttpResponseMessage response = _client.GetAsync(url).Result;
+                response.EnsureSuccessStatusCode();
+                return JsonConvert.DeserializeObject<List<CUSTOMERREPOS_DTO>>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (Exception ignore) { }
+            return new List<CUSTOMERREPOS_DTO>();
         }
 
         internal void touchRepoLastSync(string? customerAgentAuthKey, RepoDTO repo)

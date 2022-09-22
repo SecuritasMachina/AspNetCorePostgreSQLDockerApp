@@ -51,8 +51,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 if (cacheRefreshTime.AddMinutes(5) < DateTime.Now)
                 {
                     cacheRefreshTime = DateTime.Now;
-                    var github = new GitHubClient(new ProductHeaderValue($"SecuritasMachina_Agent_{VersionUtil.getAppName()}")); // TODO: other setup
-                    var tokenAuth = new Credentials(GITHUB_PAT_Token); // NOTE: not real token
+                    var github = new GitHubClient(new ProductHeaderValue($"SecuritasMachina_Agent_{VersionUtil.getAppName()}")); 
+                    var tokenAuth = new Credentials(GITHUB_PAT_Token); 
                     github.Credentials = tokenAuth;
                     IReadOnlyList<Repository> contents = await github
                                                     .Repository.GetAllForUser(GITHUB_OrgName);
@@ -90,18 +90,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
                     TimeSpan lastSyncSpan = now.Subtract(repo.lastSyncDate);
 
-                    if (lastSyncSpan.TotalHours < repo.syncMinimumHours)
+                    if (lastSyncSpan.TotalHours < repo.syncMinimumHours && lastBackupSpan.TotalHours < repo.syncMinArchiveHours)
                     {
-                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skip {repo.FullName} last Sync @ {repo.lastSyncDate.ToString()}");
+                        //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skip {repo.FullName} last Sync @ {repo.lastSyncDate.ToString()}");
                         continue;
-                    }
-                    if (lastBackupSpan.TotalHours < repo.syncMinArchiveHours)
-                    {
-                        if (lastSyncSpan.TotalHours < repo.syncMinimumHours)
-                        {
-                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skip {repo.FullName} last backup @ {repo.lastBackupDate.ToString()}");
-                            continue;
-                        }
                     }
 
                     if (!ThreadUtilsV2.Instance.isGitWorkerInQueue(repo.FullName))
