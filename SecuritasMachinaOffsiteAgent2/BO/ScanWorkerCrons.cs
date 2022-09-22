@@ -13,7 +13,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
     {
         private static DateTime jobCronsListTime;
         private static List<JobDTO> _WorkerDTOs;
-        private ScanGitHubWorker scanGitHubWorker = new ScanGitHubWorker(RunTimeSettings.GITHUB_PAT_Token, RunTimeSettings.GITHUB_OrgName, RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleArchiveBucketName);
+        private ScanGitHubWorker scanGitHubWorker = new ScanGitHubWorker(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleArchiveBucketName);
         private ArchiveWorker archiveWorker = new ArchiveWorker(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleArchiveBucketName, RunTimeSettings.RetentionDays);
         private StatusWorker statusWorker = new StatusWorker();
         private UpdateOffSiteBytesWorker updateOffSiteBytesWorker = new UpdateOffSiteBytesWorker(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleArchiveBucketName, RunTimeSettings.RetentionDays);
@@ -87,7 +87,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                             DateTime nextDate = crontabSchedule.GetNextOccurrence(DateTime.Now);
                             TimeSpan nextRunJobspan = nextDate.Subtract(DateTime.Now);
                             int totalMinLeft = ((int)nextRunJobspan.TotalMinutes);
-                            if (nextRunJobspan.TotalMinutes < .5)
+                            if (nextRunJobspan.TotalSeconds < 10)
                             {
                                 HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Checking {jobDTO.workerName} @ {jobDTO.cronSpec}");
                                 if (String.Equals(jobDTO.workerName, "ScanGitHubWorker", StringComparison.OrdinalIgnoreCase) && !scanGitHubWorker.isBusy())
