@@ -35,19 +35,20 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 return;
             }
             _isBusy = true;
-            if (cacheRefreshTime.AddMinutes(5) < DateTime.Now)
+            List<CUSTOMERREPOS_DTO> _CustomerRepos = HTTPUtils.Instance.getCustomerReposList(RunTimeSettings.customerAgentAuthKey);
+            foreach (CUSTOMERREPOS_DTO cUSTOMERREPOS_DTO in _CustomerRepos)
             {
-                List<CUSTOMERREPOS_DTO> _CustomerRepos = HTTPUtils.Instance.getCustomerReposList(RunTimeSettings.customerAgentAuthKey);
-                foreach (CUSTOMERREPOS_DTO cUSTOMERREPOS_DTO in _CustomerRepos)
+                if (String.IsNullOrEmpty(cUSTOMERREPOS_DTO.authToken))
+                    continue;
+
+
+
+                GenericMessage genericMessage = new GenericMessage();
+                try
                 {
-                    if (String.IsNullOrEmpty(cUSTOMERREPOS_DTO.authToken))
-                        continue;
-
-
-                    
-                    GenericMessage genericMessage = new GenericMessage();
-                    try
+                    if (cacheRefreshTime.AddMinutes(5) < DateTime.Now)
                     {
+                        cacheRefreshTime=DateTime.Now;
                         var github = new GitHubClient(new ProductHeaderValue($"SecuritasMachina_Agent_{VersionUtil.getAppName()}"));
                         var tokenAuth = new Credentials(cUSTOMERREPOS_DTO.authToken);
                         github.Credentials = tokenAuth;
@@ -72,47 +73,47 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         HTTPUtils.Instance.putCache(RunTimeSettings.customerAgentAuthKey, "REPOLIST", JsonConvert.SerializeObject(genericMessage));
                         HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Found {repoDTOs.Count} Repositories @ {RunTimeSettings.GITHUB_OrgName}");
 
-
-
-                        _RepoDTOs = HTTPUtils.Instance.getRepoList(RunTimeSettings.customerAgentAuthKey);
-                        //Loop through and run any crons
-                        bool queuedSuccess = false;
-                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Checking {_RepoDTOs.Count} GitHub Repositories");
-                        foreach (RepoDTO repo in _RepoDTOs.Where(i => !String.IsNullOrEmpty(i.backupFrequency)))
-                        {
-                            CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.backupFrequency);
-
-                            DateTime now = Utils.getDBDateNow();
-                            TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
-                            TimeSpan lastSyncSpan = now.Subtract(repo.lastSyncDate);
-
-                            if (lastSyncSpan.TotalHours < repo.syncMinimumHours && lastBackupSpan.TotalHours < repo.syncMinArchiveHours)
-                            {
-                                //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skip {repo.FullName} last Sync @ {repo.lastSyncDate.ToString()}");
-                                continue;
-                            }
-
-                            if (!ThreadUtilsV2.Instance.isGitWorkerInQueue(repo.FullName))
-                            {
-                                GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker(cUSTOMERREPOS_DTO.authToken, cUSTOMERREPOS_DTO.authName, this.customerGuid, this.googleBucketName, repo);
-                                bool success = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
-
-                                if (!queuedSuccess)
-                                    queuedSuccess = success;
-                                Thread.Sleep(10);
-                            }
-
-                        }
-                       
-
-
                     }
-                    catch (Exception ex)
+
+                    _RepoDTOs = HTTPUtils.Instance.getRepoList(RunTimeSettings.customerAgentAuthKey);
+                    //Loop through and run any crons
+                    bool queuedSuccess = false;
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Checking {_RepoDTOs.Count} GitHub Repositories");
+                    foreach (RepoDTO repo in _RepoDTOs.Where(i => !String.IsNullOrEmpty(i.backupFrequency)))
                     {
-                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"ScanGitHubWorker {ex.ToString()}");
+                        CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.backupFrequency);
+
+                        DateTime now = Utils.getDBDateNow();
+                        TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
+                        TimeSpan lastSyncSpan = now.Subtract(repo.lastSyncDate);
+
+                        if (lastSyncSpan.TotalHours < repo.syncMinimumHours && lastBackupSpan.TotalHours < repo.syncMinArchiveHours)
+                        {
+                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skip {repo.FullName} last Sync @ {lastSyncSpan.TotalHours} last Backup: {lastBackupSpan.TotalHours}");
+                            continue;
+                        }
+
+                        if (!ThreadUtilsV2.Instance.isGitWorkerInQueue(repo.FullName))
+                        {
+                            GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker(cUSTOMERREPOS_DTO.authToken, cUSTOMERREPOS_DTO.authName, this.customerGuid, this.googleBucketName, repo);
+                            bool success = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
+
+                            if (!queuedSuccess)
+                                queuedSuccess = success;
+                            Thread.Sleep(10);
+                        }
+
                     }
+
+
+
+                }
+                catch (Exception ex)
+                {
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", $"ScanGitHubWorker {ex.ToString()}");
                 }
             }
+
             _isBusy = false;
 
         }

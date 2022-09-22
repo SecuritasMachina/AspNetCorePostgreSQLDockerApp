@@ -28,14 +28,15 @@ namespace SecuritasMachinaOffsiteAgent.BO
             _isBusy = true;
             DateTime purgeOlderDate = DateTime.Now.AddDays(retentionDays * -1);
 
-            HTTPUtils.Instance.writeToLogAsync(this.authtoken, "INFO", $"Scanning {googleBucketName} for older than ({purgeOlderDate.ToShortDateString()})");
+            HTTPUtils.Instance.writeToLogAsync(this.authtoken, "INFO", $"Scanning {googleBucketName} for files older than ({purgeOlderDate.ToLongDateString()})");
 
             DirListingDTO dirListingDTO = CloudUtils.Instance.listFiles(googleBucketName);
 
-            try
+
+            bool filesDeleted = false;
+            foreach (FileDTO file in dirListingDTO.fileDTOs)
             {
-                bool filesDeleted = false;
-                foreach (FileDTO file in dirListingDTO.fileDTOs)
+                try
                 {
                     if (file.lastWriteDateTime < purgeOlderDate)
                     {
@@ -43,16 +44,16 @@ namespace SecuritasMachinaOffsiteAgent.BO
                         CloudUtils.Instance.deleteFile(googleBucketName, file.FileName);
                         filesDeleted = true;
                     }
+                }
+                catch (Exception ex)
+                {
+                    HTTPUtils.Instance.writeToLogAsync(this.authtoken, "ERROR", googleBucketName + " ArchiveWorker: " + ex.ToString());
 
                 }
-                if (filesDeleted)
-                    Utils.UpdateOffsiteBytes(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleArchiveBucketName);
             }
-            catch (Exception ex)
-            {
-                HTTPUtils.Instance.writeToLogAsync(this.authtoken, "ERROR", googleBucketName + " ArchiveWorker: " + ex.ToString());
+            if (filesDeleted)
+                Utils.UpdateOffsiteBytes(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleArchiveBucketName);
 
-            }
             _isBusy = false;
             //Thread.Sleep(6 * 60 * 60 * 1000 * RunTimeSettings.PollBaseTime);
         }

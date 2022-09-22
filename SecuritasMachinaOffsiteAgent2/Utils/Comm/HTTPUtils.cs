@@ -155,7 +155,7 @@ namespace Common.Utils.Comm
                 response.EnsureSuccessStatusCode();
                 return JsonConvert.DeserializeObject<List<CUSTOMERREPOS_DTO>>(response.Content.ReadAsStringAsync().Result);
             }
-            catch (Exception ignore) { }
+            catch (Exception ex) { writeToLogAsync(customerAuthKey, "ERROR", ex.ToString()); }
             return new List<CUSTOMERREPOS_DTO>();
         }
 
