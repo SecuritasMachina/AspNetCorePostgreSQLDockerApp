@@ -203,10 +203,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Listening on {RunTimeSettings.customerAgentAuthKey}");
 
-
-
-                //Start up background jobs
-
                 scanWorkerCrons = new ScanWorkerCrons();
                 Timer scanCronHubWorkerTimer = new Timer();
                 scanCronHubWorkerTimer.Interval = (1000);
@@ -227,6 +223,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             catch (Exception ex)
             {
                 Console.WriteLine(ex.ToString());
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", ex.ToString());
             }
             finally
             {

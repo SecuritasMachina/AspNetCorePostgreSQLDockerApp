@@ -28,7 +28,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             _isBusy = true;
             DateTime purgeOlderDate = DateTime.Now.AddDays(retentionDays * -1);
 
-            HTTPUtils.Instance.writeToLogAsync(this.authtoken, "INFO", $"Scanning {googleBucketName} for files older than ({purgeOlderDate.ToLongDateString()})");
+            HTTPUtils.Instance.writeToLogAsync(this.authtoken, "INFO", $"Scanning storage bucket: s{googleBucketName} for files older than ({purgeOlderDate.ToShortDateString()})");
 
             DirListingDTO dirListingDTO = CloudUtils.Instance.listFiles(googleBucketName);
 
