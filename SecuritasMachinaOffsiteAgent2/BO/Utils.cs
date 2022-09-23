@@ -296,8 +296,24 @@ namespace SecuritasMachinaOffsiteAgent.BO
             Process shell = new Process();
             shell.StartInfo = info;
             shell.EnableRaisingEvents = true;
-            shell.ErrorDataReceived += new DataReceivedEventHandler(ShellErrorDataReceived);
-            shell.OutputDataReceived += new DataReceivedEventHandler(ShellOutputDataReceived);
+            shell.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
+            {
+                // Prepend line numbers to each line of the output.
+                if (!String.IsNullOrEmpty(e.Data))
+                {
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"[{numOutputLines}] - {e.Data}");
+
+                }
+            });
+            shell.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+            {
+                // Prepend line numbers to each line of the output.
+                if (!String.IsNullOrEmpty(e.Data))
+                {
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"[{numOutputLines}] - {e.Data}");
+
+                }
+            });
 
             shell.Start();
             shell.BeginErrorReadLine();

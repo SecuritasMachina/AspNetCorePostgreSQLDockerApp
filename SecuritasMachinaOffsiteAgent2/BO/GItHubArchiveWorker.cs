@@ -11,13 +11,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
         private string customerGuid;
         private string googleBucketName;
         private RepoDTO repo;
-        private string GITHUB_PAT_Token;
-        private string GITHUB_OrgName;
 
-        public GitHubArchiveWorker(string GITHUB_PAT_Token, string GITHUB_OrgName, string customerGuid, string googleBucketName, RepoDTO pRepoDTO)
+        public GitHubArchiveWorker( string customerGuid, string googleBucketName, RepoDTO pRepoDTO)
         {
-            this.GITHUB_PAT_Token = GITHUB_PAT_Token;
-            this.GITHUB_OrgName = GITHUB_OrgName;
             this.customerGuid = customerGuid;
             this.googleBucketName = googleBucketName;
             this.repo = pRepoDTO;

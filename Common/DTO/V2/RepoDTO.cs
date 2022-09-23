@@ -20,5 +20,6 @@ namespace Common.DTO.V2
         public DateTime lastSyncDate { get; set; }
         public int syncMinimumHours { get; set; }
         public int syncMinArchiveHours { get; set; }
+        public string customerRepoIDFK { get; set; }
     }
 }

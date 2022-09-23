@@ -46,34 +46,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 GenericMessage genericMessage = new GenericMessage();
                 try
                 {
-                    if (cacheRefreshTime.AddMinutes(5) < DateTime.Now)
-                    {
-                        cacheRefreshTime=DateTime.Now;
-                        var github = new GitHubClient(new ProductHeaderValue($"SecuritasMachina_Agent_{VersionUtil.getAppName()}"));
-                        var tokenAuth = new Credentials(cUSTOMERREPOS_DTO.authToken);
-                        github.Credentials = tokenAuth;
-                        IReadOnlyList<Repository> contents = await github
-                                                        .Repository.GetAllForUser(cUSTOMERREPOS_DTO.authName);
-                        List<RepoDTO> repoDTOs = new List<RepoDTO>();
-                        foreach (Repository repo in contents)
-                        {
-                            RepoDTO repoDTO = new RepoDTO();
-                            repoDTO.Description = repo.Description;
-                            repoDTO.FullName = repo.FullName;
-                            repoDTO.Size = repo.Size;
-                            repoDTO.UpdatedAt = repo.UpdatedAt.ToUnixTimeMilliseconds();
-                            repoDTO.Url = repo.CloneUrl;
-                            repoDTOs.Add(repoDTO);
-                        }
-
-                        GenericMessage.msgTypes msgType = GenericMessage.msgTypes.REPOLIST;
-                        genericMessage.msgType = msgType.ToString();
-                        genericMessage.msg = JsonConvert.SerializeObject(repoDTOs);
-                        genericMessage.guid = RunTimeSettings.customerAgentAuthKey;
-                        HTTPUtils.Instance.putCache(RunTimeSettings.customerAgentAuthKey, "REPOLIST", JsonConvert.SerializeObject(genericMessage));
-                        HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Found {repoDTOs.Count} Repositories @ {RunTimeSettings.GITHUB_OrgName}");
-
-                    }
+                    
 
                     _RepoDTOs = HTTPUtils.Instance.getRepoList(RunTimeSettings.customerAgentAuthKey);
                     //Loop through and run any crons
@@ -89,13 +62,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                         if (lastSyncSpan.TotalHours < repo.syncMinimumHours && lastBackupSpan.TotalHours < repo.syncMinArchiveHours)
                         {
-                            HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skip {repo.FullName} last Sync @ {lastSyncSpan.TotalHours} last Backup: {lastBackupSpan.TotalHours}");
+                            //HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Skip {repo.FullName} last Sync @ {lastSyncSpan.TotalHours} last Backup: {lastBackupSpan.TotalHours}");
                             continue;
                         }
 
                         if (!ThreadUtilsV2.Instance.isGitWorkerInQueue(repo.FullName))
                         {
-                            GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker(cUSTOMERREPOS_DTO.authToken, cUSTOMERREPOS_DTO.authName, this.customerGuid, this.googleBucketName, repo);
+                            GitHubArchiveWorker gitHubArchiveWorker = new GitHubArchiveWorker( this.customerGuid, this.googleBucketName, repo);
                             bool success = ThreadUtilsV2.Instance.addToGitHubWorkerQueue(gitHubArchiveWorker);
 
                             if (!queuedSuccess)
