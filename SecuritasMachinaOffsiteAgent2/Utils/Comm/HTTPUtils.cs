@@ -132,11 +132,11 @@ namespace Common.Utils.Comm
             return ret;
         }
 
-        internal List<RepoDTO> getRepoList(string customerAuthKey)
+        internal List<RepoDTO> getRepoList(string customerAuthKey, string? id)
         {
             try
             {
-                string url = "api/v3/repos";
+                string url = "api/v3/repos/"+id;
 
                 HttpResponseMessage response = _client.GetAsync(url).Result;
                 response.EnsureSuccessStatusCode();
@@ -144,6 +144,19 @@ namespace Common.Utils.Comm
             }
             catch (Exception ignore) { }
             return new List<RepoDTO>();
+        }
+        internal List<CUSTOMERREPOS_DTO> getCustomerRepoSourceList(string customerAuthKey)
+        {
+            try
+            {
+                string url = "api/v3/customerRepos";
+
+                HttpResponseMessage response = _client.GetAsync(url).Result;
+                response.EnsureSuccessStatusCode();
+                return JsonConvert.DeserializeObject<List<CUSTOMERREPOS_DTO>>(response.Content.ReadAsStringAsync().Result);
+            }
+            catch (Exception ignore) { }
+            return new List<CUSTOMERREPOS_DTO>();
         }
         internal List<CUSTOMERREPOS_DTO> getCustomerReposList(string customerAuthKey)
         {

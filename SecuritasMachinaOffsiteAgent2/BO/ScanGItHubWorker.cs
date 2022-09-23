@@ -15,14 +15,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
         private static DateTime cacheRefreshTime;
         private static List<RepoDTO> _RepoDTOs;
         private bool _isBusy = false;
-        // private List<CUSTOMERREPOS_DTO> _CustomerRepos;
 
         public ScanGitHubWorker(string customerGuid, string googleBucketName)
         {
             this.customerGuid = customerGuid;
             this.googleBucketName = googleBucketName;
             cacheRefreshTime = DateTime.MinValue;
-            //repoListRefreshTime = DateTime.MinValue;
             _RepoDTOs = new List<RepoDTO>();
         }
 
@@ -40,18 +38,13 @@ namespace SecuritasMachinaOffsiteAgent.BO
             {
                 if (String.IsNullOrEmpty(cUSTOMERREPOS_DTO.authToken))
                     continue;
-
-
-
-                GenericMessage genericMessage = new GenericMessage();
+                //GenericMessage genericMessage = new GenericMessage();
                 try
                 {
-                    
-
-                    _RepoDTOs = HTTPUtils.Instance.getRepoList(RunTimeSettings.customerAgentAuthKey);
+                    _RepoDTOs = HTTPUtils.Instance.getRepoList(RunTimeSettings.customerAgentAuthKey, cUSTOMERREPOS_DTO.id);
                     //Loop through and run any crons
                     bool queuedSuccess = false;
-                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Checking {_RepoDTOs.Count} GitHub Repositories");
+                    HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Checking {_RepoDTOs.Count} in {cUSTOMERREPOS_DTO.repoName} Repository");
                     foreach (RepoDTO repo in _RepoDTOs.Where(i => !String.IsNullOrEmpty(i.backupFrequency)))
                     {
                         CrontabSchedule crontabSchedule = CrontabSchedule.Parse(repo.backupFrequency);
