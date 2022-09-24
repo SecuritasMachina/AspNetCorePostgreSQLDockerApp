@@ -352,8 +352,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
             }
         }
 
-        internal static void writeFileToGoogle(string _customerGuid, string contentType, string _googleBucketName, string pBaseBackupName, string outFileName, string _passPhrase)
+        internal static bool writeFileToGoogle(string _customerGuid, string contentType, string _googleBucketName, string pBaseBackupName, string outFileName, string _passPhrase)
         {
+            bool ret = false;
             try
             {
                 long startTimeStamp = new DateTimeOffset(DateTime.UtcNow).ToUniversalTime().ToUnixTimeMilliseconds();
@@ -367,12 +368,14 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 File.Delete(outFileName);
                 Google.Apis.Storage.v1.Data.Object outFileProperties = googleClient.GetObject(_googleBucketName, _backupName);
                 HTTPUtils.Instance.writeBackupHistory(_customerGuid, pBaseBackupName, _backupName, (long)outFileProperties.Size, startTimeStamp);
+                ret = true;
                 //
             }
             catch (Exception ex)
             {
-
+                HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", ex.ToString());
             }
+            return ret;
 
             //throw new NotImplementedException();
         }

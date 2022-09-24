@@ -56,52 +56,32 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 BlobServiceClient blobServiceClient = new BlobServiceClient(_azureBlobEndpoint);
                 BlobContainerClient containerClient = blobServiceClient.GetBlobContainerClient(_BlobContainerName);
 
-                BlobClient blobClient = containerClient.GetBlobClient(_backupName);
-                BlobProperties props = blobClient.GetProperties();
+                BlobClient azureBlobClient = containerClient.GetBlobClient(_backupName);
+                BlobProperties props = azureBlobClient.GetProperties();
                 string contentType = props.ContentType;
-                if (!blobClient.Exists())
+                if (!azureBlobClient.Exists())
                 {
                     string msg = $"{_backupName} disappeared before it could be read, is there another agent running using azureBlobContainerName:{_BlobContainerName}";
                     HTTPUtils.Instance.writeToLogAsync(this._customerGuid, "INFO", msg);
 
                     return msg;
                 }
-                BlobProperties properties = await blobClient.GetPropertiesAsync();
+                BlobProperties properties = await azureBlobClient.GetPropertiesAsync();
                 StorageClient googleClient = StorageClient.Create();
-                Stream inStream = blobClient.OpenRead();
+                Stream inStream = azureBlobClient.OpenRead();
 
                 //Store directly on fusepath
                 string basebackupName = _backupName;
                 string outFileName = _backupName + ".enc";
-                int generationCount = 1;
-
-                while (true)
-                {
-                    if (generationCount > 9999)
-                    {
-                        break;
-                    }
-
-                    //outFileName = backupName + ".enc";
-
-                    if (googleClient.ListObjects(_googleBucketName, outFileName).Count() > 0)
-                    {
-                        _backupName = basebackupName + "-" + generationCount;
-                        outFileName = _backupName + ".enc";
-                        generationCount++;
-                    }
-                    else { break; }
-                }
+                
+                outFileName = _backupName + "-" + DateTime.Now.ToString("yyyy-MM-dd") + ".enc";
                 long startTimeStamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
 
                 new Utils().AES_EncryptStream(this._customerGuid, inStream, contentType, _googleBucketName, outFileName, properties.ContentLength, _backupName, _passPhrase);
                 Google.Apis.Storage.v1.Data.Object outFileProperties = googleClient.GetObject(_googleBucketName, outFileName);
 
-                //StorageClient googleClient = StorageClient.Create();
-                //Check filelengths, make sure they match? or are reasonable
-                //Delete bacpac file on Azure 
                 
-                blobClient.Delete();
+                azureBlobClient.Delete();
                 FileDTO fileDTO = new FileDTO();
                 fileDTO.FileName = _backupName;
                 fileDTO.Status = "Success";
@@ -112,13 +92,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 genericMessage.msg = myJson;
                 genericMessage.guid = _customerGuid;
 
-                //await ServiceBusUtils.postMsg2ControllerAsync(JsonConvert.SerializeObject(genericMessage));
                 HTTPUtils.Instance.writeToLogAsync(this._customerGuid, "BACKUP-END", "Completed encryption, deleted : " + basebackupName);
                 HTTPUtils.Instance.writeBackupHistory(this._customerGuid, basebackupName, _backupName, (long)outFileProperties.Size, startTimeStamp);
                 string messageType = HttpUtility.UrlEncode(basebackupName + "-backupComplete");
                 ServiceBusUtils.Instance.postMsg2ControllerAsync("agent/putCache", this._customerGuid, messageType, JsonConvert.SerializeObject(genericMessage));
-                // HTTPUtils.Instance.putCache(this.customerGuid, payload, JsonConvert.SerializeObject(genericMessage));
-                //Console.WriteLine("Completed encryption, deleted : " + basebackupName + " payload:" + messageType);
                 ThreadUtilsV2.Instance.deleteFromQueue(basebackupName);
             }
             catch (Exception ex)

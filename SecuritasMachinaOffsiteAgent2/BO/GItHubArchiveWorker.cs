@@ -56,28 +56,12 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     //repo.lastSyncDate = Utils.getDBDateNow();
                     HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Debug lastBackupSpan.TotalHours:{lastBackupSpan.TotalHours} while Syncing {repo.FullName}");
                     repo.lastBackupDate = Utils.getDBDateNow();
-                    int generationCount = 1;
                     StorageClient googleClient = StorageClient.Create();
 
                     string basebackupName = repo.FullName.Replace("/", "_");
                     string outFileName = basebackupName + ".zip";
-                    while (true)
-                    {
-                        if (generationCount > 99999)
-                        {
-                            break;
-                        }
-
-
-                        if (googleClient.ListObjects(googleBucketName, outFileName).Count() > 0)
-                        {
-
-                            outFileName = basebackupName + "-" + generationCount + ".zip";
-                            generationCount++;
-                        }
-                        else { break; }
-                    }
-
+                   
+                    outFileName = basebackupName + "-" + DateTime.Now.ToString("yyyy-MM-dd") + ".zip";
 
                     string zipName = $"{RunTimeSettings.DATAPATH}/Repos/{outFileName}";
                     try { File.Delete(zipName); } catch (Exception ignore) { }
