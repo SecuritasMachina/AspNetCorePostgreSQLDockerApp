@@ -121,7 +121,8 @@ namespace Common.Utils.Comm
                     serviceBusMessages.Clear();
                 Console.WriteLine($"{numProduced} messages were produced to topic {topic}");
             }
-            return null;
+            return Task.CompletedTask; 
+
         }
 
         private static async void TimerProc(object state)
