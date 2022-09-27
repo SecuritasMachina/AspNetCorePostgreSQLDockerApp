@@ -11,6 +11,9 @@ using Timer = System.Timers.Timer;
 using Object = System.Object;
 using SecuritasMachinaOffsiteAgent.Utils.Comm.GoogleAPI;
 using System.Text;
+using Confluent.Kafka;
+using Newtonsoft.Json.Linq;
+using static Confluent.Kafka.ConfigPropertyNames;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
@@ -21,10 +24,10 @@ namespace SecuritasMachinaOffsiteAgent.BO
         // static int RetentionDays = 45;
 
         // the client that owns the connection and can be used to create senders and receivers
-        ServiceBusClient client;
+        //ServiceBusClient client;
 
         // the processor that reads and processes messages from the queue
-        ServiceBusProcessor processor;
+        //ServiceBusProcessor processor;
         // private int tLoopCount;
         private ScanWorkerCrons scanWorkerCrons;
 
@@ -185,19 +188,21 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             try
             {
+                var totalCount = 0;
+                CancellationTokenSource cts = new CancellationTokenSource();
+                IConsumer<string, string> consumer;
                 try
                 {
-                    // Create the client object that will be used to create sender and receiver objects
-                    client = new ServiceBusClient(RunTimeSettings.SBConnectionString);
-                    // create a processor that we can use to process the messages
-                    processor = client.CreateProcessor(RunTimeSettings.serviceBusTopic, RunTimeSettings.clientSubscriptionName, new ServiceBusProcessorOptions());
-                    // add handler to process messages
-                    processor.ProcessMessageAsync += MessageHandler;
-                    // add handler to process any errors
-                    processor.ProcessErrorAsync += ErrorHandler;
-                    // start processing 
-                    await processor.StartProcessingAsync();
+                    ClientConfig config = new ClientConfig();
+                    config.BootstrapServers = "172.29.27.15:9093";
+                    var consumerConfig = new ConsumerConfig(config);
+                    consumerConfig.GroupId = "dotnet-example-group-1";
+                    consumerConfig.AutoOffsetReset = AutoOffsetReset.Earliest;
+                    consumerConfig.EnableAutoCommit = false;
+                    consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
+                    consumer.Subscribe(RunTimeSettings.serviceBusTopic);
                     HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Starting Listener on {RunTimeSettings.customerAgentAuthKey}");
+
                 }
                 catch (Exception ex) { Console.WriteLine($"Error Connecting to Service Bus {ex.ToString()}"); return; }
 
@@ -212,10 +217,25 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
                 Console.WriteLine();
                 Console.WriteLine("All Workers Ready");
-
-                while (true)
+                try
                 {
-                    Thread.Sleep(1000 * 60);
+                    while (true)
+                    {
+
+                        var cr = consumer.Consume(cts.Token);
+                        totalCount += JObject.Parse(cr.Message.Value).Value<int>("count");
+                        Console.WriteLine($"Consumed record with key {cr.Message.Key} and value {cr.Message.Value}, and updated total count to {totalCount}");
+
+                        Thread.Sleep(10);
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    // Ctrl-C was pressed.
+                }
+                finally
+                {
+                    consumer.Close();
                 }
 
 
@@ -239,9 +259,9 @@ namespace SecuritasMachinaOffsiteAgent.BO
             Timer tmpTimer = (System.Timers.Timer)source;
             tmpTimer.Enabled = false;
             tmpTimer.AutoReset = false;
-            tmpTimer.Interval= double.MaxValue;
+            tmpTimer.Interval = double.MaxValue;
             this.scanWorkerCrons.StartAsync();
-            tmpTimer.Interval = (1000 * 10) ;
+            tmpTimer.Interval = (1000 * 10);
             tmpTimer.AutoReset = true;
             tmpTimer.Enabled = true;
         }

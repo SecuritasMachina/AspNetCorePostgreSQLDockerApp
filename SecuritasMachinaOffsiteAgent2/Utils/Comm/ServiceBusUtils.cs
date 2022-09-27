@@ -1,21 +1,23 @@
 ﻿using Azure.Messaging.ServiceBus;
 using Common.DTO.V2;
 using Common.Statics;
+using Confluent.Kafka;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Timer = System.Threading.Timer;
 
 namespace Common.Utils.Comm
 {
     public class ServiceBusUtils
     {
-        private static SynchronizedCollection<ServiceBusMessage> serviceBusMessages = new SynchronizedCollection<ServiceBusMessage>();
+        private static SynchronizedCollection<Message<string, string>> serviceBusMessages = new SynchronizedCollection<Message<string, string>>();
         // the client that owns the connection and can be used to create senders and receivers
-        private static ServiceBusClient? client;
+        // private static ServiceBusClient? client;
         //static DateTime startTime = DateTime.Now;
         private static Timer aTimer;
 
         // the sender used to publish messages to the queue
-        private static ServiceBusSender? sender;
+        //private static ServiceBusSender? sender;
         private static ServiceBusUtils? instance;
 
         public static ServiceBusUtils Instance
@@ -33,11 +35,6 @@ namespace Common.Utils.Comm
         private ServiceBusUtils()
         {
 
-            if (client == null)
-                client = new ServiceBusClient(RunTimeSettings.sbrootConnectionString);
-            if (sender == null)
-                sender = client.CreateSender("coordinator");
-
             if (aTimer == null)
             {
                 aTimer = new Timer(new TimerCallback(TimerProc));
@@ -52,11 +49,6 @@ namespace Common.Utils.Comm
             // Console.WriteLine($"nameSpace:{nameSpace} messageType:{messageType} RunTimeSettings.sbrootConnectionString {RunTimeSettings.sbrootConnectionString}");
             try
             {
-                if (client == null)
-                    client = new ServiceBusClient(RunTimeSettings.sbrootConnectionString);
-                if (sender == null)
-                    sender = client.CreateSender("coordinator");
-
                 lock (aTimer)
                     if (aTimer == null)
                     {
@@ -74,26 +66,17 @@ namespace Common.Utils.Comm
                 genericMessage.msg = json;
                 genericMessage.timeStamp = new DateTimeOffset(DateTime.UtcNow).ToUniversalTime().ToUnixTimeMilliseconds();
                 genericMessage.authKey = RunTimeSettings.authKey;
+                string key = "Key";
                 lock (serviceBusMessages)
-                    serviceBusMessages.Add(new ServiceBusMessage(JsonConvert.SerializeObject(genericMessage)));
+                    serviceBusMessages.Add(new Message<string, string> { Key = key, Value = JsonConvert.SerializeObject(genericMessage) });
                 //TimeSpan span2 = DateTime.Now.Subtract(startTime);
 
                 if (serviceBusMessages.Count > 100)//Something very wrong happened
                 {
-                    ServiceBusMessage[] tmpArr = StaticUtils.ToArraySafe(serviceBusMessages);
-                    await sender.SendMessagesAsync(tmpArr);
-                    Console.WriteLine(serviceBusMessages.Count + " messages sent by Count ");
-                    lock (serviceBusMessages)
-                        serviceBusMessages.Clear();
-                    //startTime = DateTime.Now;
+                    await sendMsgs();
                     lock (aTimer)
                         if (aTimer != null)
-                        {
-                            //aTimer.Change(Timeout.Infinite, Timeout.Infinite);
                             aTimer.Change(5 * 1000, Timeout.Infinite);
-
-                            //aTimer.Dispose();
-                        }
                 }
             }
             catch (Exception ex)
@@ -102,22 +85,48 @@ namespace Common.Utils.Comm
                 Console.WriteLine("postMsg2ControllerAsync " + ex.ToString());
             }
         }
-        private static async void TimerProc(object state)
+
+        private static Task sendMsgs()
         {
-
-            ServiceBusMessage[] tmpArr = StaticUtils.ToArraySafe(serviceBusMessages);
-            if (tmpArr.Length > 0)
+            ClientConfig config = new ClientConfig();
+            config.BootstrapServers = "172.29.27.15:9093";
+            string topic = "coordinator";
+            Message<string, string>[] tmpArr = StaticUtils.ToArraySafe(serviceBusMessages);
+            using (var producer = new ProducerBuilder<string, string>(config).Build())
             {
-                if (client == null)
-                    client = new ServiceBusClient(RunTimeSettings.sbrootConnectionString);
-                if (sender == null)
-                    sender = client.CreateSender("coordinator");
+                int numProduced = 0;
+                foreach (Message<string, string> t1 in tmpArr)
+                {
+                    string key = t1.Key;
+                    string val = t1.Value;
+                    Console.WriteLine($"Producing record: {key} {val}");
 
-                await sender.SendMessagesAsync(tmpArr);
-                //Console.WriteLine(Thread.CurrentThread.ManagedThreadId + " " + serviceBusMessages.Count + " messages sent by timer ");
+                    producer.Produce(topic, new Message<string, string> { Key = key, Value = val },
+                        (deliveryReport) =>
+                        {
+                            if (deliveryReport.Error.Code != ErrorCode.NoError)
+                            {
+                                Console.WriteLine($"Failed to deliver message: {deliveryReport.Error.Reason}");
+                            }
+                            else
+                            {
+                                Console.WriteLine($"Produced message to: {deliveryReport.TopicPartitionOffset}");
+                                numProduced += 1;
+                            }
+                        });
+                }
+
+                producer.Flush(TimeSpan.FromSeconds(10));
                 lock (serviceBusMessages)
                     serviceBusMessages.Clear();
+                Console.WriteLine($"{numProduced} messages were produced to topic {topic}");
             }
+            return null;
+        }
+
+        private static async void TimerProc(object state)
+        {
+            await sendMsgs();
             lock (aTimer)
                 aTimer.Change(5 * 1000, Timeout.Infinite);
         }
