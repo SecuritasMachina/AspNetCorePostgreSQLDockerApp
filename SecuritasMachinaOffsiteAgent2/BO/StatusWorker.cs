@@ -35,12 +35,18 @@ namespace SecuritasMachinaOffsiteAgent.BO
             DirListingDTO agentDirList = Utils.doDirListing(RunTimeSettings.customerAgentAuthKey, RunTimeSettings.GoogleArchiveBucketName);
 
             DirListingDTO stagingContainerDirListingDTO1 =  Utils.doDirListingAsync(stagingContainerClient.GetBlobsAsync()).Result;
-
-            BlobContainerClient restoredContainerName = blobServiceClient.GetBlobContainerClient(RunTimeSettings.azureBlobRestoreContainerName);
-
-            DirListingDTO restoredListingDTO = Utils.doDirListingAsync(restoredContainerName.GetBlobsAsync()).Result;
-
             StatusDTO statusDTO = new StatusDTO();
+            
+            try
+            {
+                BlobContainerClient restoredContainerName = blobServiceClient.GetBlobContainerClient(RunTimeSettings.azureBlobRestoreContainerName);
+                DirListingDTO restoredListingDTO = Utils.doDirListingAsync(restoredContainerName.GetBlobsAsync()).Result;
+                statusDTO.RestoredListingDTO = restoredListingDTO.fileDTOs;
+            }
+            catch (Exception)
+            {
+            }
+            
             statusDTO.activeThreads = (long)Process.GetCurrentProcess().Threads.Count;
             statusDTO.UserProcessorTime = Process.GetCurrentProcess().UserProcessorTime.Ticks;
             statusDTO.TotalProcessorTime = Process.GetCurrentProcess().TotalProcessorTime.Ticks;
@@ -48,7 +54,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
             statusDTO.TotalMemory = System.GC.GetTotalMemory(false);
             statusDTO.AgentFileDTOs = agentDirList.fileDTOs;
             statusDTO.StagingFileDTOs = stagingContainerDirListingDTO1.fileDTOs;
-            statusDTO.RestoredListingDTO = restoredListingDTO.fileDTOs;
+            
             ServiceBusUtils.Instance.postMsg2ControllerAsync("agent/status", RunTimeSettings.customerAgentAuthKey, "status", JsonConvert.SerializeObject(statusDTO));
             _isBusy = false;
 
