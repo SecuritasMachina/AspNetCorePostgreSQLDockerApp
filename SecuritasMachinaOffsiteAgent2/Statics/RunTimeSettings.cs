@@ -9,9 +9,11 @@ namespace Common.Statics
 {
     public class RunTimeSettings
     {
-        public static string? sbrootConnectionString = "";
-        public static string? SBConnectionString = "";
-       // public static string? topicNamecustomerGuid;
+        public static string kafkaLogin ;
+        public static string kafkaPassword ;
+        public static string kafkaBootstrapServers;
+        public static string coordinatorTopicName;
+
         public static string? passPhrase;
         public static string? customerAgentAuthKey;
         public static string? authKey;

@@ -2,7 +2,7 @@ FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build-env
 WORKDIR /app
 ENV DOTNET_EnableDiagnostics=1
 # Copy everything
-COPY *.csproj ./
+COPY * ./
 # Restore as distinct layers
 RUN dotnet restore
 # Build and publish a release

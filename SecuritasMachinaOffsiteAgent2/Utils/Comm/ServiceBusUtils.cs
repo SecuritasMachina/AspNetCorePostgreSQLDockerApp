@@ -19,6 +19,8 @@ namespace Common.Utils.Comm
         // the sender used to publish messages to the queue
         //private static ServiceBusSender? sender;
         private static ServiceBusUtils? instance;
+        private static ClientConfig config;
+        private static IProducer<string, string> producer;
 
         public static ServiceBusUtils Instance
         {
@@ -41,6 +43,9 @@ namespace Common.Utils.Comm
                 lock (aTimer)
                     aTimer.Change(5 * 1000, Timeout.Infinite);
             }
+            config = new ClientConfig();
+            config.BootstrapServers = RunTimeSettings.kafkaBootstrapServers;
+            producer = new ProducerBuilder<string, string>(config).Build();
 
         }
 
@@ -88,40 +93,37 @@ namespace Common.Utils.Comm
 
         private static Task sendMsgs()
         {
-            ClientConfig config = new ClientConfig();
-            config.BootstrapServers = "172.29.27.15:9093";
-            string topic = "coordinator";
+
+            string topic = RunTimeSettings.coordinatorTopicName;
             Message<string, string>[] tmpArr = StaticUtils.ToArraySafe(serviceBusMessages);
-            using (var producer = new ProducerBuilder<string, string>(config).Build())
+
+            int numProduced = 0;
+            foreach (Message<string, string> t1 in tmpArr)
             {
-                int numProduced = 0;
-                foreach (Message<string, string> t1 in tmpArr)
-                {
-                    string key = t1.Key;
-                    string val = t1.Value;
-                    Console.WriteLine($"Producing record: {key} {val}");
+                string key = t1.Key;
+                string val = t1.Value;
+                Console.WriteLine($"Producing record: {key} {val}");
 
-                    producer.Produce(topic, new Message<string, string> { Key = key, Value = val },
-                        (deliveryReport) =>
+                producer.Produce(topic, new Message<string, string> { Key = key, Value = val },
+                    (deliveryReport) =>
+                    {
+                        if (deliveryReport.Error.Code != ErrorCode.NoError)
                         {
-                            if (deliveryReport.Error.Code != ErrorCode.NoError)
-                            {
-                                Console.WriteLine($"Failed to deliver message: {deliveryReport.Error.Reason}");
-                            }
-                            else
-                            {
-                                Console.WriteLine($"Produced message to: {deliveryReport.TopicPartitionOffset}");
-                                numProduced += 1;
-                            }
-                        });
-                }
-
-                producer.Flush(TimeSpan.FromSeconds(10));
-                lock (serviceBusMessages)
-                    serviceBusMessages.Clear();
-                Console.WriteLine($"{numProduced} messages were produced to topic {topic}");
+                            Console.WriteLine($"Failed to deliver message: {deliveryReport.Error.Reason}");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Produced message to: {deliveryReport.TopicPartitionOffset}");
+                            numProduced += 1;
+                        }
+                    });
             }
-            return Task.CompletedTask; 
+
+            producer.Flush(TimeSpan.FromSeconds(10));
+            lock (serviceBusMessages)
+                serviceBusMessages.Clear();
+            Console.WriteLine($"{numProduced} messages were produced to topic {topic}");
+            return Task.CompletedTask;
 
         }
 

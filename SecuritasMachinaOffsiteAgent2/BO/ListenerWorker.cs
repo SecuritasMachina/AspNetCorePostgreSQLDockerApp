@@ -14,6 +14,7 @@ using System.Text;
 using Confluent.Kafka;
 using Newtonsoft.Json.Linq;
 using static Confluent.Kafka.ConfigPropertyNames;
+using Confluent.Kafka.Admin;
 
 namespace SecuritasMachinaOffsiteAgent.BO
 {
@@ -102,7 +103,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             HTTPUtils.Instance.populateRuntime(RunTimeSettings.customerAgentAuthKey);
             HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "CONFIGINFO", $"azureBlobEndpoint length: {RunTimeSettings.azureBlobEndpoint.Length} azureBlobContainerName:{RunTimeSettings.azureSourceBlobContainerName} azureBlobRestoreContainerName:{RunTimeSettings.azureBlobRestoreContainerName} GoogleStorageBucketName: {RunTimeSettings.GoogleArchiveBucketName} RetentionDays:{RunTimeSettings.RetentionDays} MaxThreads: {RunTimeSettings.MaxThreads} encryptionPassPhrase Length: {RunTimeSettings.envPassPhrase.Length}");
-            if (RunTimeSettings.SBConnectionString == null || RunTimeSettings.SBConnectionString.Length == 0)
+            if (RunTimeSettings.kafkaBootstrapServers == null || RunTimeSettings.kafkaBootstrapServers.Length == 0)
             {
                 Console.WriteLine("!!! Unable to retrieve configuration !!!");
                 Environment.Exit(1);
@@ -188,18 +189,18 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
             try
             {
-                var totalCount = 0;
                 CancellationTokenSource cts = new CancellationTokenSource();
                 IConsumer<string, string> consumer;
                 try
                 {
                     ClientConfig config = new ClientConfig();
-                    config.BootstrapServers = "172.29.27.15:9093";
+                    config.BootstrapServers = RunTimeSettings.kafkaBootstrapServers;
                     var consumerConfig = new ConsumerConfig(config);
-                    consumerConfig.GroupId = "dotnet-example-group-1";
+                    consumerConfig.GroupId = "SecuritasMachina-group-1";
                     consumerConfig.AutoOffsetReset = AutoOffsetReset.Earliest;
                     consumerConfig.EnableAutoCommit = false;
                     consumer = new ConsumerBuilder<string, string>(consumerConfig).Build();
+                    await CreateTopicMaybe(RunTimeSettings.serviceBusTopic, config);
                     consumer.Subscribe(RunTimeSettings.serviceBusTopic);
                     HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "INFO", $"Starting Listener on {RunTimeSettings.customerAgentAuthKey}");
 
@@ -223,9 +224,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     {
 
                         var cr = consumer.Consume(cts.Token);
-                        totalCount += JObject.Parse(cr.Message.Value).Value<int>("count");
-                        Console.WriteLine($"Consumed record with key {cr.Message.Key} and value {cr.Message.Value}, and updated total count to {totalCount}");
-
+                        Console.WriteLine($"Consumed record with key {cr.Message.Key} and value {cr.Message.Value}");
+                        await MessageHandler(cr.Message.Value);
                         Thread.Sleep(10);
                     }
                 }
@@ -253,7 +253,28 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 //await client.DisposeAsync();
             }
         }
-
+         async Task CreateTopicMaybe(string name, ClientConfig cloudConfig)
+        {
+            using (var adminClient = new AdminClientBuilder(cloudConfig).Build())
+            {
+                try
+                {
+                    await adminClient.CreateTopicsAsync(new List<TopicSpecification> {
+                        new TopicSpecification { Name = name, NumPartitions = 1, ReplicationFactor = 1 } });
+                }
+                catch (CreateTopicsException e)
+                {
+                    if (e.Results[0].Error.Code != ErrorCode.TopicAlreadyExists)
+                    {
+                        Console.WriteLine($"An error occured creating topic {name}: {e.Results[0].Error.Reason}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Topic already exists");
+                    }
+                }
+            }
+        }
         private void scanCronHubWorkerTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
             Timer tmpTimer = (System.Timers.Timer)source;
@@ -268,9 +289,8 @@ namespace SecuritasMachinaOffsiteAgent.BO
 
 
         // handle received messages
-        static async Task MessageHandler(ProcessMessageEventArgs args)
+        static async Task MessageHandler(string body)
         {
-            string body = args.Message.Body.ToString();
 
             try
             {
@@ -319,7 +339,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "ERROR", "ListenerWorker:" + ex.Message.ToString());
             }
             // complete the message. message is deleted from the queue. 
-            await args.CompleteMessageAsync(args.Message);
+           // await args.CompleteMessageAsync(args.Message);
         }
 
         // handle any errors when receiving messages

@@ -59,12 +59,10 @@ namespace Common.Utils.Comm
                     response.EnsureSuccessStatusCode();
                     string result = response.Content.ReadAsStringAsync().Result;
                     dynamic stuff = JsonConvert.DeserializeObject(result);
-
-                    RunTimeSettings.SBConnectionString = stuff.serviceBusEndPoint;
-                    RunTimeSettings.sbrootConnectionString = stuff.sbrootConnectionString;
-
-                    //RunTimeSettings.topicNamecustomerGuid = stuff.topicName;
-                    //RunTimeSettings.topicCustomerGuid = pcustomerGuid;
+                    RunTimeSettings.kafkaLogin = stuff.kafkaLogin;
+                    RunTimeSettings.kafkaPassword = stuff.kafkaPassword;
+                    RunTimeSettings.kafkaBootstrapServers = stuff.kafkaBootstrapServers;
+                    RunTimeSettings.coordinatorTopicName = stuff.coordinatorTopicName;
                     RunTimeSettings.serviceBusTopic = stuff.serviceBusTopic;
                     RunTimeSettings.PollBaseTime = stuff.PollBaseTime == null ? (int)1 : (int)stuff.PollBaseTime;
                     RunTimeSettings.clientSubscriptionName = stuff.clientSubscriptionName;
@@ -136,11 +134,11 @@ namespace Common.Utils.Comm
         {
             try
             {
-                string url = "api/v3/repos/"+id;
+                string url = "api/v3/repos/" + id;
 
                 HttpResponseMessage response = _client.GetAsync(url).Result;
                 response.EnsureSuccessStatusCode();
-                return JsonConvert.DeserializeObject<List<RepoDTO>>(response.Content.ReadAsStringAsync().Result) ;
+                return JsonConvert.DeserializeObject<List<RepoDTO>>(response.Content.ReadAsStringAsync().Result);
             }
             catch (Exception ignore) { }
             return new List<RepoDTO>();
@@ -185,7 +183,7 @@ namespace Common.Utils.Comm
 
                 HttpResponseMessage response = _client.GetAsync(url).Result;
                 response.EnsureSuccessStatusCode();
-                
+
                 return JsonConvert.DeserializeObject<List<JobDTO>>(response.Content.ReadAsStringAsync().Result);
             }
             catch (Exception ignore) { }

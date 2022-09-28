@@ -10,12 +10,9 @@ namespace Common.DTO.V2
     {
         public string azureBlobEndpoint { get; set; }
         public string serviceBusTopic { get; set; }
-        public string sbrootConnectionString { get; set; }
         public string clientSubscriptionName { get; set; }
 
-        public string serviceBusEndPoint { get; set; }
-        public string ServiceBusSubscription { get; set; }
-        public string topicName { get; set; }
+        public string coordinatorTopicName { get; set; }
         public string passPhrase { get; set; }
         public Boolean subscriptionActive { get; set; }
         public int PollBaseTime { get; set; }
@@ -30,5 +27,8 @@ namespace Common.DTO.V2
         public int retentionDays { get; set; }
         public int maxThreads { get; set; }
         public string GOOGLE_APPLICATION_CREDENTIALS { get; set; }
+        public string kafkaBootstrapServers { get; set; }
+        public string kafkaPassword { get; set; }
+        public string kafkaLogin { get; set; }
     }
 }
