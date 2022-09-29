@@ -52,8 +52,6 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 TimeSpan lastBackupSpan = now.Subtract(repo.lastBackupDate);
                 if (retVal == 0 && lastBackupSpan.TotalHours > repo.syncMinArchiveHours)
                 {
-                    
-                    //repo.lastSyncDate = Utils.getDBDateNow();
                     HTTPUtils.Instance.writeToLogAsync(RunTimeSettings.customerAgentAuthKey, "TRACE", $"Debug lastBackupSpan.TotalHours:{lastBackupSpan.TotalHours} while Syncing {repo.FullName}");
                     repo.lastBackupDate = Utils.getDBDateNow();
                     StorageClient googleClient = StorageClient.Create();
@@ -61,7 +59,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                     string basebackupName = repo.FullName.Replace("/", "_");
                     string outFileName = basebackupName + ".zip";
                    
-                    outFileName = basebackupName + "-" + DateTime.Now.ToString("yyyy-MM-dd") + ".zip";
+                    outFileName = basebackupName + "-" + DateTime.Now.ToString("yyyy-MM-dd_HH-MM") + ".zip";
 
                     string zipName = $"{RunTimeSettings.DATAPATH}/Repos/{outFileName}";
                     try { File.Delete(zipName); } catch (Exception ignore) { }

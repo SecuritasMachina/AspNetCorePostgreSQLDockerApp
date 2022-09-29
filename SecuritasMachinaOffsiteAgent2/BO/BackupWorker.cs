@@ -74,7 +74,7 @@ namespace SecuritasMachinaOffsiteAgent.BO
                 string basebackupName = _backupName;
                 string outFileName = _backupName + ".enc";
                 
-                outFileName = _backupName + "-" + DateTime.Now.ToString("yyyy-MM-dd") + ".enc";
+                outFileName = _backupName + "-" + DateTime.Now.ToString("yyyy-MM-dd_HH-MM") + ".enc";
                 long startTimeStamp = new DateTimeOffset(DateTime.UtcNow).ToUnixTimeMilliseconds();
 
                 new Utils().AES_EncryptStream(this._customerGuid, inStream, contentType, _googleBucketName, outFileName, properties.ContentLength, _backupName, _passPhrase);
